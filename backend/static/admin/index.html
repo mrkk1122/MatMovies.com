@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MatMovies Admin Control Center 🚀</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#0b0c10',
+                        darkSurface: '#1f2833',
+                        primaryGreen: 'rgb(var(--primary-green-rgb, 0 255 102))',
+                        accentSlate: '#c5c6c7',
+                        accentCyan: '#66fcf1',
+                        neonPurple: '#8a2be2'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Plus Jakarta Sans Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- React and ReactDOM CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel standalone for in-browser JSX parsing -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        :root {
+            --primary-green-rgb: 0 255 102;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0b0c10;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0b0c10;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f2833;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00FF66;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fadeIn {
+            animation: fadeIn 0.3s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-darkBg text-white antialiased">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Dynamic API Configuration (Defaults to current server host API path)
+        const getBaseURL = () => {
+            return localStorage.getItem("matmovies_api_url") || `${window.location.origin}/api/v1`;
+        };
+
+        const setBaseURL = (url) => {
+            if (!url) {
+                localStorage.removeItem("matmovies_api_url");
+            } else {
+                const cleanUrl = url.endsWith('/') ? url.slice(0, -1) : url;
+                localStorage.setItem("matmovies_api_url", cleanUrl);
+            }
+        };
+
+        // Shared API wrapper
+        const apiCall = async (endpoint, options = {}) => {
+            const baseUrl = getBaseURL();
+            const url = `${baseUrl}${endpoint}`;
+            const token = localStorage.getItem("matmovies_admin_token");
+            
+            const headers = {
+                "Content-Type": "application/json",
+                ...(token ? { "Authorization": `Bearer ${token}` } : {})
+            };
+
+            if (options.body && !(options.body instanceof FormData)) {
+                options.body = JSON.stringify(options.body);
+            }
+
+            const response = await fetch(url, { ...options, headers: { ...headers, ...options.headers } });
+            
+            if (response.status === 401) {
+                localStorage.removeItem("matmovies_admin_token");
+                localStorage.removeItem("matmovies_admin_user");
+                window.dispatchEvent(new Event("auth_changed"));
+            }
+
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.detail || "Request failed.");
+            }
+            return data;
+        };
+
+        // Lucide icon helper
+        function LucideIcon({ name, className = "w-5 h-5", ...props }) {
+            useEffect(() => {
+                lucide.createIcons();
+            }, [name]);
+            return <i data-lucide={name} className={className} {...props}></i>;
+        }
+
+        // Login Panel
+        function LoginScreen({ onLoginSuccess }) {
+            const [email, setEmail] = useState("");
+            const [password, setPassword] = useState("");
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState("");
+            const [showSettings, setShowSettings] = useState(false);
+            const [apiUrl, setApiUrl] = useState(getBaseURL());
+
+            const handleLogin = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setError("");
+                try {
+                    const baseUrl = getBaseURL();
+                    const formData = new URLSearchParams();
+                    formData.append("username", email.trim());
+                    formData.append("password", password);
+
+                    const response = await fetch(`${baseUrl}/auth/token`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok) {
+                        throw new Error(data.detail || "Failed to authenticate.");
+                    }
+
+                    if (data.user.role !== "Admin") {
+                        throw new Error("Access Denied! Administrators only.");
+                    }
+
+                    localStorage.setItem("matmovies_admin_token", data.access_token);
+                    localStorage.setItem("matmovies_admin_user", JSON.stringify(data.user));
+                    onLoginSuccess();
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="min-h-screen bg-darkBg flex flex-col justify-center items-center px-4 relative overflow-hidden">
+                    <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primaryGreen/10 blur-[100px] pointer-events-none"></div>
+                    <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-neonPurple/10 blur-[100px] pointer-events-none"></div>
+
+                    <div className="w-full max-w-md bg-darkSurface border border-white/10 rounded-2xl p-8 shadow-2xl relative z-10">
+                        <div className="flex flex-col items-center mb-8">
+                            <div className="w-14 h-14 bg-primaryGreen/15 rounded-xl flex items-center justify-center border border-primaryGreen/30 mb-4">
+                                <LucideIcon name="play" className="w-7 h-7 text-primaryGreen fill-primaryGreen" />
+                            </div>
+                            <h1 className="text-3xl font-black tracking-tight text-white">
+                                Mat<span className="text-primaryGreen">Movies</span>
+                            </h1>
+                            <p className="text-xs uppercase tracking-wider text-accentSlate/60 font-mono mt-1">Admin Dashboard Panel</p>
+                        </div>
+
+                        {error && (
+                            <div className="mb-5 bg-red-500/10 border border-red-500/30 text-red-200 p-3.5 rounded-xl text-xs flex gap-2">
+                                <LucideIcon name="shield-alert" className="w-4 h-4 text-red-400 shrink-0" />
+                                <span>{error}</span>
+                            </div>
+                        )}
+
+                        {!showSettings ? (
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-semibold uppercase tracking-wider text-accentSlate/80 mb-2 font-mono">Admin Email</label>
+                                    <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="admin@matmovies.com" className="w-full bg-[#11141a] text-white px-4 py-2.5 border border-white/10 rounded-xl focus:outline-none focus:border-primaryGreen text-sm" />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-semibold uppercase tracking-wider text-accentSlate/80 mb-2 font-mono">Secret Passcode</label>
+                                    <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••••••" className="w-full bg-[#11141a] text-white px-4 py-2.5 border border-white/10 rounded-xl focus:outline-none focus:border-primaryGreen text-sm" />
+                                </div>
+                                <button type="submit" disabled={loading} className="w-full bg-primaryGreen text-darkBg font-black py-3 px-4 rounded-xl transition shadow-[0_4px_10px_rgba(0,255,102,0.2)] disabled:opacity-50 mt-2 text-sm flex justify-center items-center gap-2">
+                                    {loading ? "Decrypting Credentials..." : "Unlock Dashboard"}
+                                </button>
+                            </form>
+                        ) : (
+                            <form onSubmit={(e) => { e.preventDefault(); setBaseURL(apiUrl.trim()); setShowSettings(false); }} className="space-y-4">
+                                <div>
+                                    <label className="block text-xs font-semibold uppercase tracking-wider text-accentSlate/80 mb-2 font-mono font-bold">API Connection endpoint</label>
+                                    <input type="text" required value={apiUrl} onChange={e => setApiUrl(e.target.value)} className="w-full bg-[#11141a] text-white px-4 py-2.5 border border-white/10 rounded-xl focus:outline-none focus:border-primaryGreen text-sm font-mono" />
+                                </div>
+                                <button type="submit" className="w-full bg-primaryGreen text-darkBg font-bold py-3 px-4 rounded-xl transition text-sm">
+                                    Apply Configuration
+                                </button>
+                            </form>
+                        )}
+
+                        <div className="mt-8 border-t border-white/5 pt-4 flex justify-between items-center text-xs font-mono">
+                            <span className="text-accentSlate/40">API Endpoint:</span>
+                            <button onClick={() => { setApiUrl(getBaseURL()); setShowSettings(!showSettings); }} className="text-primaryGreen hover:underline flex items-center gap-1">
+                                <LucideIcon name="settings" className="w-3.5 h-3.5" />
+                                {showSettings ? "Back to Login" : "Configure API"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Overview Tab
+        function DashboardOverview({ movies, categories, users, totalViews }) {
+            return (
+                <div className="space-y-6 animate-fadeIn">
+                    <div className="bg-gradient-to-r from-darkSurface to-[#171c24] border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h2 className="text-2xl font-black text-white">System Command Overview</h2>
+                            <p className="text-xs text-accentSlate/60 mt-1">Real-time status metrics mapping SQLite records and stream sessions</p>
+                        </div>
+                        <div className="bg-[#11141a] p-3 rounded-xl border border-white/5 font-mono text-xs text-primaryGreen flex items-center gap-2">
+                            <span className="w-2.5 h-2.5 rounded-full bg-primaryGreen animate-pulse"></span>
+                            FastAPI Backend: Online
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {[
+                            { label: "Active Movies", val: movies.length, desc: "Total cinematic video files", icon: "film", border: "border-blue-500/30 text-blue-400" },
+                            { label: "Genre Categories", val: categories.length, desc: "Active system genres", icon: "layers", border: "border-purple-500/30 text-purple-400" },
+                            { label: "Customer Base", val: users.length, desc: "Registered user profiles", icon: "users", border: "border-emerald-500/30 text-emerald-400" },
+                            { label: "Streaming Plays", val: totalViews, desc: "Cumulative dynamic stream views", icon: "eye", border: "border-amber-500/30 text-amber-400" },
+                        ].map((card, idx) => (
+                            <div key={idx} className={`bg-[#171c24]/50 border ${card.border} rounded-xl p-5 flex items-center justify-between`}>
+                                <div>
+                                    <p className="text-[10px] uppercase font-mono text-accentSlate/50 font-bold">{card.label}</p>
+                                    <p className="text-2xl font-black text-white mt-1">{card.val}</p>
+                                    <p className="text-[10px] text-accentSlate/40 mt-1.5">{card.desc}</p>
+                                </div>
+                                <div className="p-2.5 bg-white/5 rounded-lg">
+                                    <LucideIcon name={card.icon} className="w-5 h-5" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        // Movie Modal
+        function MovieFormModal({ movie, onClose, onSave }) {
+            const [title, setTitle] = useState(movie?.title || "");
+            const [description, setDescription] = useState(movie?.description || "");
+            const [rating, setRating] = useState(movie?.rating ? String(movie.rating) : "4.5");
+            const [year, setYear] = useState(movie?.year ? String(movie.year) : "2026");
+            const [duration, setDuration] = useState(movie?.duration || "");
+            const [genre, setGenre] = useState(movie?.genre || "");
+            const [videoUrl, setVideoUrl] = useState(movie?.videoUrl || movie?.video_url || "");
+            const [posterDrawableName, setPosterDrawableName] = useState(movie?.posterDrawableName || movie?.poster_drawable_name || "img_poster_cyberpunk");
+            const [language, setLanguage] = useState(movie?.language || "English");
+            const [subtitlesUrl, setSubtitlesUrl] = useState(movie?.subtitlesUrl || movie?.subtitles_url || "");
+            const [isFeatured, setIsFeatured] = useState(movie?.isFeatured || movie?.is_featured || false);
+            const [isTrending, setIsTrending] = useState(movie?.isTrending || movie?.is_trending || false);
+            const [isLatest, setIsLatest] = useState(movie?.isLatest !== undefined ? (movie?.isLatest || movie?.is_latest) : true);
+
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState("");
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                try {
+                    const payload = {
+                        title: title.trim(),
+                        description: description.trim(),
+                        rating: parseFloat(rating) || 4.5,
+                        year: parseInt(year) || 2026,
+                        duration: duration.trim(),
+                        genre: genre.trim(),
+                        videoUrl: videoUrl.trim(),
+                        posterDrawableName,
+                        language,
+                        subtitlesUrl,
+                        isFeatured,
+                        isTrending,
+                        isLatest
+                    };
+                    await onSave(movie?.id, payload);
+                    onClose();
+                } catch (err) {
+                    setError(err.message);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-center items-center p-4">
+                    <div className="bg-darkSurface border border-white/10 rounded-2xl w-full max-w-xl max-h-[85vh] overflow-y-auto shadow-2xl p-6 flex flex-col">
+                        <div className="flex justify-between items-center pb-4 border-b border-white/10 mb-4">
+                            <h3 className="font-extrabold text-white">{movie ? "Edit Movie Record" : "Deploy New Cinematic Stream"}</h3>
+                            <button onClick={onClose} className="p-1 rounded hover:bg-white/5 text-accentSlate hover:text-white">
+                                <LucideIcon name="x" />
+                            </button>
+                        </div>
+
+                        {error && <div className="bg-red-500/15 border border-red-500/35 p-3 rounded-lg text-xs text-red-200 mb-4">{error}</div>}
+
+                        <form onSubmit={handleSubmit} className="space-y-4 flex-1">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="col-span-2">
+                                    <label className="block text-[10px] uppercase font-bold tracking-wider font-mono text-accentSlate/80 mb-1.5">Movie Title</label>
+                                    <input type="text" required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Dune Chronicles" className="w-full bg-[#11141a] px-3.5 py-2 text-sm border border-white/10 rounded-lg text-white focus:outline-none focus:border-primaryGreen" />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-[10px] uppercase font-bold tracking-wider font-mono text-accentSlate/80 mb-1.5">Synopsis Description</label>
+                                    <textarea required rows="2" value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-[#11141a] px-3.5 py-2 text-sm border border-white/10 rounded-lg text-white focus:outline-none focus:border-primaryGreen" />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] uppercase font-bold tracking-wider font-mono text-accentSlate/80 mb-1.5">Rating (0-5)</label>
+                                    <input type="number" step="0.1" required value={rating} onChange={e => setRating(e.target.value)} className="w-full bg-[#11141a] px-3.5 py-2 text-sm border border-white/10 rounded-lg text-white focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] uppercase font-bold tracking-wider font-mono text-accentSlate/80 mb-1.5">Release Year</label>
+                                    <input type="number" required value={year} onChange={e => setYear(e.target.value)} className="w-full bg-[#11141a] px-3.5 py-2 text-sm border border-white/10 rounded-lg text-white focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] uppercase font-bold tracking-wider font-mono text-accentSlate/80 mb-1.5">Duration</label>
+                                    <input type="text" required value={duration} onChange={e => setDuration(e.target.value)} placeholder="e.g. 2h 15m" className="w-full bg-[#11141a] px-3.5 py-2 text-sm border border-white/10 rounded-lg text-white focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] uppercase font-bold tracking-wider font-mono text-accentSlate/80 mb-1.5">Genre (Comma classified)</label>
+                                    <input type="text" required value={genre} onChange={e => setGenre(e.target.value)} placeholder="e.g. Sci-Fi, Adventure" className="w-full bg-[#11141a] px-3.5 py-2 text-sm border border-white/10 rounded-lg text-white focus:outline-none" />
+                                </div>
+                                <div className="col-span-2">
+                                    <label className="block text-[10px] uppercase font-bold tracking-wider font-mono text-accentSlate/80 mb-1.5">Video Resource URL (MP4/M3U8)</label>
+                                    <input type="url" required value={videoUrl} onChange={e => setVideoUrl(e.target.value)} className="w-full bg-[#11141a] px-3.5 py-2 text-sm border border-white/10 rounded-lg text-white focus:outline-none" />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] uppercase font-bold tracking-wider font-mono text-accentSlate/80 mb-1.5">Key Poster Visual</label>
+                                    <select value={posterDrawableName} onChange={e => setPosterDrawableName(e.target.value)} className="w-full bg-[#11141a] px-3.5 py-2 text-sm border border-white/10 rounded-lg text-white">
+                                        <option value="img_poster_cyberpunk">img_poster_cyberpunk (Neon Cyber)</option>
+                                        <option value="img_poster_fantasy">img_poster_fantasy (Ancient Spell)</option>
+                                        <option value="img_hero_dune">img_hero_dune (Desert Planet)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] uppercase font-bold tracking-wider font-mono text-accentSlate/80 mb-1.5">Language</label>
+                                    <input type="text" required value={language} onChange={e => setLanguage(e.target.value)} className="w-full bg-[#11141a] px-3.5 py-2 text-sm border border-white/10 rounded-lg text-white focus:outline-none" />
+                                </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-6 border-t border-white/5 pt-4">
+                                <label className="flex items-center gap-2 cursor-pointer font-mono text-[11px]">
+                                    <input type="checkbox" checked={isFeatured} onChange={e => setIsFeatured(e.target.checked)} className="accent-primaryGreen rounded w-4 h-4 bg-darkBg border-white/10" />
+                                    <span>Home Carousel</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer font-mono text-[11px]">
+                                    <input type="checkbox" checked={isTrending} onChange={e => setIsTrending(e.target.checked)} className="accent-primaryGreen rounded w-4 h-4 bg-darkBg border-white/10" />
+                                    <span>Trending row</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer font-mono text-[11px]">
+                                    <input type="checkbox" checked={isLatest} onChange={e => setIsLatest(e.target.checked)} className="accent-primaryGreen rounded w-4 h-4 bg-darkBg border-white/10" />
+                                    <span>Latest Release</span>
+                                </label>
+                            </div>
+
+                            <div className="flex justify-end gap-3 pt-4 border-t border-white/10 mt-4">
+                                <button type="button" onClick={onClose} className="px-4 py-2 border border-white/10 rounded-lg text-xs hover:bg-white/5 text-accentSlate">Cancel</button>
+                                <button type="submit" disabled={loading} className="px-5 py-2 bg-primaryGreen text-darkBg font-extrabold rounded-lg text-xs flex items-center gap-1.5">
+                                    <LucideIcon name="save" className="w-4 h-4" />
+                                    {loading ? "Syncing API..." : "Save Details"}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // Movies List
+        function MovieTable({ movies, onAdd, onEdit, onDelete, onBulkDelete }) {
+            const [search, setSearch] = useState("");
+            const [selectedMovieIds, setSelectedMovieIds] = useState([]);
+
+            const filtered = movies.filter(m => m.title.toLowerCase().includes(search.toLowerCase()) || m.genre.toLowerCase().includes(search.toLowerCase()));
+
+            const handleSelectMovie = (id) => {
+                setSelectedMovieIds(prev =>
+                    prev.includes(id) ? prev.filter(mId => mId !== id) : [...prev, id]
+                );
+            };
+
+            const handleSelectAll = (e) => {
+                if (e.target.checked) {
+                    setSelectedMovieIds(filtered.map(m => m.id));
+                } else {
+                    setSelectedMovieIds([]);
+                }
+            };
+
+            return (
+                <div className="bg-[#171c24]/30 border border-white/10 rounded-2xl p-6 space-y-4 animate-fadeIn">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <LucideIcon name="film" className="text-primaryGreen" />
+                                Video Content Catalog
+                            </h3>
+                            <p className="text-xs text-accentSlate/50 mt-0.5">Maintain title synopses, category channels and play stream paths</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            {selectedMovieIds.length > 0 && onBulkDelete && (
+                                <button
+                                    onClick={() => {
+                                        if (confirm(`Are you sure you want to permanently delete ${selectedMovieIds.length} selected movie(s) from the database?`)) {
+                                            onBulkDelete(selectedMovieIds);
+                                            setSelectedMovieIds([]);
+                                        }
+                                    }}
+                                    className="bg-red-500/15 hover:bg-red-500/25 border border-red-500/30 text-red-400 font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition"
+                                >
+                                    <LucideIcon name="trash-2" className="w-4 h-4" /> Delete Selected ({selectedMovieIds.length})
+                                </button>
+                            )}
+                            <button onClick={onAdd} className="bg-primaryGreen text-darkBg font-black px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-[0_2px_8px_rgba(0,255,102,0.15)]">
+                                <LucideIcon name="plus" className="w-4 h-4" /> Deploy Video
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="relative">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-accentSlate/40">
+                            <LucideIcon name="search" className="w-4 h-4" />
+                        </span>
+                        <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by title, genre description..." className="w-full bg-[#11141a] text-white pl-10 pr-4 py-2 border border-white/10 rounded-xl focus:outline-none focus:border-primaryGreen text-sm" />
+                    </div>
+
+                    <div className="overflow-x-auto border border-white/5 rounded-xl">
+                        <table className="w-full text-left text-sm">
+                            <thead>
+                                <tr className="bg-[#11141a] border-b border-white/5 text-accentSlate/60 uppercase font-mono text-[9px] tracking-wider select-none">
+                                    <th className="px-5 py-3 w-12">
+                                        <input
+                                            type="checkbox"
+                                            checked={filtered.length > 0 && selectedMovieIds.length === filtered.length}
+                                            onChange={handleSelectAll}
+                                            className="rounded bg-[#11141a] border-white/10 text-primaryGreen focus:ring-primaryGreen cursor-pointer w-4 h-4"
+                                        />
+                                    </th>
+                                    <th className="px-5 py-3">Catalog Info</th>
+                                    <th className="px-5 py-3">Classification Details</th>
+                                    <th className="px-5 py-3 font-mono">Release</th>
+                                    <th className="px-5 py-3">Views</th>
+                                    <th className="px-5 py-3 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {filtered.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="6" className="px-5 py-8 text-center text-accentSlate/30 font-mono text-xs">No media files found matching query.</td>
+                                    </tr>
+                                ) : (
+                                    filtered.map(m => (
+                                        <tr key={m.id} className="hover:bg-white/[0.01] transition">
+                                            <td className="px-5 py-3.5 w-12">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedMovieIds.includes(m.id)}
+                                                    onChange={() => handleSelectMovie(m.id)}
+                                                    className="rounded bg-[#11141a] border-white/10 text-primaryGreen focus:ring-primaryGreen cursor-pointer w-4 h-4"
+                                                />
+                                            </td>
+                                            <td className="px-5 py-3.5">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-12 bg-white/5 border border-white/10 rounded text-[7px] flex flex-col justify-center items-center text-accentSlate/50 font-bold uppercase select-none p-1">
+                                                        🎬
+                                                    </div>
+                                                    <div>
+                                                        <div className="font-bold text-white flex items-center gap-1.5">
+                                                            {m.title}
+                                                            {m.isFeatured && <span className="text-[8px] font-mono bg-amber-500/15 border border-amber-500/25 text-amber-400 px-1 py-0.5 rounded">Featured</span>}
+                                                        </div>
+                                                        <div className="text-xs text-accentSlate/50 mt-1">{m.duration} • {m.language}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-3.5">
+                                                <div className="max-w-xs text-xs">
+                                                    <p className="text-accentSlate/75 line-clamp-2 leading-relaxed">{m.description}</p>
+                                                    <div className="flex flex-wrap gap-1 mt-1.5">
+                                                        {m.genre.split(",").map((g, idx) => (
+                                                            <span key={idx} className="bg-white/5 text-accentSlate/70 border border-white/5 px-2 py-0.5 rounded-full text-[9px] font-mono">{g.trim()}</span>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-3.5 font-mono text-xs text-accentSlate">{m.year}</td>
+                                            <td className="px-5 py-3.5 font-mono text-xs text-emerald-400 font-bold">{m.viewsCount || m.views_count || 0} plays</td>
+                                            <td className="px-5 py-3.5 text-right whitespace-nowrap">
+                                                <div className="inline-flex gap-1.5">
+                                                    <button onClick={() => onEdit(m)} className="p-1.5 bg-[#11141a] hover:bg-white/5 rounded border border-white/5 text-accentSlate hover:text-white transition"><LucideIcon name="edit-2" className="w-3.5 h-3.5" /></button>
+                                                    <button onClick={() => { if (confirm(`Delete movie '${m.title}' permanently?`)) onDelete(m.id); }} className="p-1.5 bg-[#11141a] hover:bg-red-500/10 rounded border border-white/5 text-accentSlate hover:text-red-400 transition"><LucideIcon name="trash-2" className="w-3.5 h-3.5" /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+
+        // Categories List
+        function CategoryTable({ categories, onCreate }) {
+            const [name, setName] = useState("");
+            const [description, setDescription] = useState("");
+            const [iconName, setIconName] = useState("auto_awesome");
+            const [loading, setLoading] = useState(false);
+            const [msg, setMsg] = useState("");
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                setMsg("");
+                try {
+                    await onCreate({ name: name.trim(), description: description.trim(), iconName });
+                    setMsg("Category registered!");
+                    setName("");
+                    setDescription("");
+                } catch (err) {
+                    setMsg(`Error: ${err.message}`);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            return (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fadeIn">
+                    <div className="bg-[#171c24]/30 border border-white/10 rounded-2xl p-6 lg:col-span-2 space-y-4">
+                        <div>
+                            <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                <LucideIcon name="layers" className="text-primaryGreen" />
+                                Custom Categories List
+                            </h3>
+                            <p className="text-xs text-accentSlate/50">Manage genre shelves shown inside Android app client</p>
+                        </div>
+                        <div className="overflow-x-auto border border-white/5 rounded-xl">
+                            <table className="w-full text-left text-sm">
+                                <thead>
+                                    <tr className="bg-[#11141a] border-b border-white/5 text-accentSlate/60 uppercase font-mono text-[9px] tracking-wider">
+                                        <th className="px-5 py-3">Icon constant</th>
+                                        <th className="px-5 py-3">Category Name</th>
+                                        <th className="px-5 py-3">Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {categories.map(c => (
+                                        <tr key={c.id}>
+                                            <td className="px-5 py-3 whitespace-nowrap"><span className="bg-primaryGreen/5 text-primaryGreen border border-primaryGreen/15 px-2 py-0.5 rounded font-mono text-xs">🏷️ {c.iconName || c.icon_name}</span></td>
+                                            <td className="px-5 py-3 font-bold text-white whitespace-nowrap">{c.name}</td>
+                                            <td className="px-5 py-3 text-xs text-accentSlate/70 leading-normal">{c.description}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#171c24]/30 border border-white/10 rounded-2xl p-6 h-max space-y-4">
+                        <h4 className="font-extrabold text-white">Add New Genre</h4>
+                        {msg && <div className="bg-white/5 border border-white/10 p-2.5 rounded text-xs font-mono text-accentSlate">{msg}</div>}
+                        <form onSubmit={handleSubmit} className="space-y-3">
+                            <div>
+                                <label className="block text-[10px] uppercase font-bold tracking-wider font-mono text-accentSlate/80 mb-1">Name</label>
+                                <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full bg-[#11141a] px-3 py-2 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-primaryGreen" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] uppercase font-bold tracking-wider font-mono text-accentSlate/80 mb-1">Description</label>
+                                <textarea required rows="2" value={description} onChange={e => setDescription(e.target.value)} className="w-full bg-[#11141a] px-3 py-2 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-primaryGreen" />
+                            </div>
+                            <div>
+                                <label className="block text-[10px] uppercase font-bold tracking-wider font-mono text-accentSlate/80 mb-1">Android Symbol</label>
+                                <select value={iconName} onChange={e => setIconName(e.target.value)} className="w-full bg-[#11141a] px-3 py-2 border border-white/10 rounded-lg text-sm text-white">
+                                    <option value="auto_awesome">auto_awesome (Magic Sparks)</option>
+                                    <option value="rocket_launch">rocket_launch (Space Sci-Fi)</option>
+                                    <option value="local_fire_department">local_fire_department (Action Fire)</option>
+                                    <option value="theater_comedy">theater_comedy (Drama)</option>
+                                </select>
+                            </div>
+                            <button type="submit" disabled={loading} className="w-full py-2 bg-primaryGreen text-darkBg font-black rounded-lg text-xs flex justify-center items-center gap-1">
+                                <LucideIcon name="plus" className="w-4 h-4" /> Save Category
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // Users List
+        function UserTable({ users, currentAdmin, onRole, onSub, onDelete }) {
+            const [search, setSearch] = useState("");
+            const [sortField, setSortField] = useState(null); // 'createdAt' or 'subscription'
+            const [sortDirection, setSortDirection] = useState("asc"); // 'asc' or 'desc'
+
+            const filtered = users.filter(u => u.username.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()));
+
+            const handleSort = (field) => {
+                if (sortField === field) {
+                    setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+                } else {
+                    setSortField(field);
+                    setSortDirection("asc");
+                }
+            };
+
+            const getSubRank = (u) => {
+                const status = u.subscriptionStatus || u.subscription_status || "Free";
+                const s = status.toUpperCase();
+                if (s === "VIP") return 3;
+                if (s === "PREMIUM") return 2;
+                return 1;
+            };
+
+            const sorted = [...filtered].sort((a, b) => {
+                if (!sortField) return 0;
+
+                let valA, valB;
+                if (sortField === "createdAt") {
+                    valA = new Date(a.createdAt || a.created_at || 0).getTime();
+                    valB = new Date(b.createdAt || b.created_at || 0).getTime();
+                } else if (sortField === "subscription") {
+                    valA = getSubRank(a);
+                    valB = getSubRank(b);
+                }
+
+                if (valA < valB) return sortDirection === "asc" ? -1 : 1;
+                if (valA > valB) return sortDirection === "asc" ? 1 : -1;
+                return 0;
+            });
+
+            const renderSortIcon = (field) => {
+                if (sortField !== field) {
+                    return <LucideIcon name="arrow-up-down" className="w-3.5 h-3.5 inline-block ml-1 opacity-40 shrink-0" />;
+                }
+                return sortDirection === "asc" ? (
+                    <LucideIcon name="arrow-up" className="w-3.5 h-3.5 inline-block ml-1 text-primaryGreen shrink-0" />
+                ) : (
+                    <LucideIcon name="arrow-down" className="w-3.5 h-3.5 inline-block ml-1 text-primaryGreen shrink-0" />
+                );
+            };
+
+            return (
+                <div className="bg-[#171c24]/30 border border-white/10 rounded-2xl p-6 space-y-4 animate-fadeIn">
+                    <div>
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <LucideIcon name="users" className="text-primaryGreen" />
+                            Registered Customer Accounts
+                        </h3>
+                        <p className="text-xs text-accentSlate/50 mt-0.5">Change roles (Admin privileges) or subscription levels (Free vs Premium)</p>
+                    </div>
+
+                    <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search users by email or username..." className="w-full bg-[#11141a] text-white px-4 py-2 border border-white/10 rounded-xl focus:outline-none focus:border-primaryGreen text-sm" />
+
+                    <div className="overflow-x-auto border border-white/5 rounded-xl">
+                        <table className="w-full text-left text-sm">
+                            <thead>
+                                <tr className="bg-[#11141a] border-b border-white/5 text-accentSlate/60 uppercase font-mono text-[9px] tracking-wider select-none">
+                                    <th className="px-5 py-3">Identity</th>
+                                    <th className="px-5 py-3">Privilege Role</th>
+                                    <th 
+                                        className="px-5 py-3 cursor-pointer hover:text-white transition"
+                                        onClick={() => handleSort("subscription")}
+                                    >
+                                        <span className="inline-flex items-center gap-1">
+                                            <span>Subscription Tier</span>
+                                            {renderSortIcon("subscription")}
+                                        </span>
+                                    </th>
+                                    <th 
+                                        className="px-5 py-3 cursor-pointer hover:text-white transition"
+                                        onClick={() => handleSort("createdAt")}
+                                    >
+                                        <span className="inline-flex items-center gap-1">
+                                            <span>Created</span>
+                                            {renderSortIcon("createdAt")}
+                                        </span>
+                                    </th>
+                                    <th className="px-5 py-3 text-right">Delete</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {sorted.map(u => {
+                                    const isSelf = currentAdmin && currentAdmin.id === u.id;
+                                    return (
+                                        <tr key={u.id} className="hover:bg-white/[0.01] transition">
+                                            <td className="px-5 py-3">
+                                                <div>
+                                                    <div className="font-bold text-white flex items-center gap-1 text-sm">
+                                                        {u.username}
+                                                        {isSelf && <span className="text-[8px] bg-primaryGreen/15 border border-primaryGreen/35 text-primaryGreen px-1 rounded font-mono uppercase">You</span>}
+                                                    </div>
+                                                    <div className="text-xs text-accentSlate/50 font-mono mt-0.5">{u.email}</div>
+                                                </div>
+                                            </td>
+                                            <td className="px-5 py-3 whitespace-nowrap">
+                                                {isSelf ? (
+                                                    <span className="text-xs font-bold text-primaryGreen bg-[#11141a] px-2.5 py-1 rounded border border-primaryGreen/20">Administrator</span>
+                                                ) : (
+                                                    <select value={u.role} onChange={e => onRole(u.id, e.target.value)} className="bg-[#11141a] text-white text-xs border border-white/10 rounded px-2 py-1 focus:outline-none font-semibold">
+                                                        <option value="User">Standard User</option>
+                                                        <option value="Admin">Administrator</option>
+                                                    </select>
+                                                )}
+                                            </td>
+                                            <td className="px-5 py-3 whitespace-nowrap">
+                                                <select value={u.subscriptionStatus || u.subscription_status} onChange={e => onSub(u.id, e.target.value)} className="bg-[#11141a] text-xs border border-white/10 rounded px-2 py-1 focus:outline-none font-bold">
+                                                    <option value="Free">Free Basic</option>
+                                                    <option value="Premium">Premium HD</option>
+                                                    <option value="VIP">VIP Gold</option>
+                                                </select>
+                                            </td>
+                                            <td className="px-5 py-3 whitespace-nowrap text-xs text-accentSlate font-mono">{new Date(u.createdAt || u.created_at).toLocaleDateString()}</td>
+                                            <td className="px-5 py-3 text-right">
+                                                {!isSelf && <button onClick={() => onDelete(u.id)} className="p-1.5 bg-[#11141a] text-accentSlate hover:text-red-400 hover:bg-red-500/10 border border-white/5 rounded transition"><LucideIcon name="trash-2" className="w-4 h-4" /></button>}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            );
+        }
+
+        // System Health & Audit Logs Panel
+        function SystemLogsPanel() {
+            const [data, setData] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState("");
+            const [searchQuery, setSearchQuery] = useState("");
+            const [selectedLevel, setSelectedLevel] = useState("ALL");
+            const [selectedCategory, setSelectedCategory] = useState("ALL");
+            const [autoRefresh, setAutoRefresh] = useState(true);
+            const [refreshCountdown, setRefreshCountdown] = useState(5);
+
+            const fetchLogs = async (silent = false) => {
+                if (!silent) setLoading(true);
+                try {
+                    setError("");
+                    const res = await apiCall("/system/logs");
+                    setData(res);
+                    setRefreshCountdown(5);
+                } catch (err) {
+                    setError(err.message || "Failed to load system logs and metrics.");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            useEffect(() => {
+                fetchLogs();
+            }, []);
+
+            useEffect(() => {
+                if (!autoRefresh) return;
+                const timer = setInterval(() => {
+                    setRefreshCountdown(prev => {
+                        if (prev <= 1) {
+                            fetchLogs(true);
+                            return 5;
+                        }
+                        return prev - 1;
+                    });
+                }, 1000);
+                return () => clearInterval(timer);
+            }, [autoRefresh]);
+
+            const formatBytes = (bytes) => {
+                if (!bytes) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            };
+
+            const logs = data?.logs || [];
+            const metrics = data?.metrics || {};
+
+            const filteredLogs = logs.filter(log => {
+                const matchesSearch = log.message.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                      log.category.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesLevel = selectedLevel === "ALL" || log.level === selectedLevel;
+                const matchesCategory = selectedCategory === "ALL" || log.category === selectedCategory;
+                return matchesSearch && matchesLevel && matchesCategory;
+            });
+
+            const getLevelClass = (level) => {
+                switch (level) {
+                    case "SUCCESS": return "bg-emerald-500/10 border-emerald-500/20 text-emerald-400";
+                    case "WARNING": return "bg-amber-500/10 border-amber-500/20 text-amber-400";
+                    case "ERROR": return "bg-red-500/10 border-red-500/20 text-red-400";
+                    default: return "bg-blue-500/10 border-blue-500/20 text-blue-400";
+                }
+            };
+
+            const getCategoryClass = (cat) => {
+                switch (cat) {
+                    case "SYSTEM": return "bg-purple-500/10 border-purple-500/20 text-purple-400";
+                    case "AUTH": return "bg-cyan-500/10 border-cyan-500/20 text-cyan-400";
+                    case "STREAM": return "bg-teal-500/10 border-teal-500/20 text-teal-400";
+                    case "DATABASE": return "bg-amber-500/10 border-amber-500/20 text-amber-400";
+                    case "SECURE": return "bg-violet-500/10 border-violet-500/20 text-violet-400";
+                    default: return "bg-gray-500/10 border-gray-500/20 text-gray-400";
+                }
+            };
+
+            return (
+                <div className="space-y-6 animate-fadeIn">
+                    {/* Header bar */}
+                    <div className="bg-gradient-to-r from-darkSurface to-[#171c24] border border-white/10 rounded-2xl p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                        <div>
+                            <h2 className="text-2xl font-black text-white flex items-center gap-2">
+                                <LucideIcon name="activity" className="text-primaryGreen" />
+                                System Health Center
+                            </h2>
+                            <p className="text-xs text-accentSlate/60 mt-1">Real-time CPU loads, SQLite database footprint, and system audit logs</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <button 
+                                onClick={() => setAutoRefresh(!autoRefresh)}
+                                className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold transition flex items-center gap-1.5 ${
+                                    autoRefresh 
+                                    ? "bg-primaryGreen/15 border-primaryGreen/30 text-primaryGreen" 
+                                    : "bg-white/5 border-white/10 text-accentSlate"
+                                }`}
+                            >
+                                <span className={`w-1.5 h-1.5 rounded-full ${autoRefresh ? "bg-primaryGreen animate-pulse" : "bg-accentSlate"}`}></span>
+                                {autoRefresh ? `Auto Refresh (${refreshCountdown}s)` : "Auto Refresh: Off"}
+                            </button>
+                            <button 
+                                onClick={() => fetchLogs()} 
+                                disabled={loading}
+                                className="bg-[#11141a] hover:bg-white/5 border border-white/10 p-2 rounded-xl text-accentSlate hover:text-white transition"
+                            >
+                                <LucideIcon name="refresh-cw" className={`w-4 h-4 ${loading ? "animate-spin text-primaryGreen" : ""}`} />
+                            </button>
+                        </div>
+                    </div>
+
+                    {error && (
+                        <div className="bg-red-500/10 border border-red-500/30 text-red-200 p-4 rounded-xl text-xs flex gap-3 animate-fadeIn">
+                            <LucideIcon name="shield-alert" className="text-red-400 shrink-0" />
+                            <span>{error}</span>
+                        </div>
+                    )}
+
+                    {/* Server Performance Metrics Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* CPU Load Card */}
+                        <div className="bg-[#171c24]/30 border border-white/10 rounded-xl p-5 space-y-4">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] uppercase font-mono font-bold text-accentSlate/50">CPU Utilization</span>
+                                <span className="p-1.5 bg-purple-500/10 text-purple-400 rounded-lg"><LucideIcon name="cpu" className="w-4 h-4" /></span>
+                            </div>
+                            <div>
+                                <h3 className="text-3xl font-black text-white">{loading && !data ? "--" : `${metrics.cpu_load || 0}%`}</h3>
+                                <div className="w-full bg-white/5 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                                    <div 
+                                        className="bg-purple-500 h-full transition-all duration-500" 
+                                        style={{ width: `${metrics.cpu_load || 0}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* RAM Footprint Card */}
+                        <div className="bg-[#171c24]/30 border border-white/10 rounded-xl p-5 space-y-4">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] uppercase font-mono font-bold text-accentSlate/50">RAM Footprint</span>
+                                <span className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg"><LucideIcon name="hard-drive" className="w-4 h-4" /></span>
+                            </div>
+                            <div>
+                                <h3 className="text-3xl font-black text-white">
+                                    {loading && !data ? "--" : `${metrics.ram?.used_mb || 0} MB`}
+                                    <span className="text-xs text-accentSlate/40 font-normal ml-1.5">/ {metrics.ram?.total_mb || 2048} MB</span>
+                                </h3>
+                                <div className="w-full bg-white/5 h-1.5 rounded-full mt-2.5 overflow-hidden">
+                                    <div 
+                                        className="bg-blue-500 h-full transition-all duration-500" 
+                                        style={{ width: `${metrics.ram?.percentage || 0}%` }}
+                                    ></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* SQLite DB Card */}
+                        <div className="bg-[#171c24]/30 border border-white/10 rounded-xl p-5 space-y-3">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] uppercase font-mono font-bold text-accentSlate/50">Database Size</span>
+                                <span className="p-1.5 bg-amber-500/10 text-amber-400 rounded-lg"><LucideIcon name="database" className="w-4 h-4" /></span>
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-black text-white">{loading && !data ? "--" : formatBytes(metrics.database?.file_size_bytes)}</h3>
+                                <div className="flex justify-between text-[10px] text-accentSlate/50 font-mono mt-2">
+                                    <span>Tables: {metrics.database?.user_count}U / {metrics.database?.movie_count}M</span>
+                                    <span className="text-emerald-400 font-bold">{metrics.database?.status || "Online"}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Connection statistics */}
+                        <div className="bg-[#171c24]/30 border border-white/10 rounded-xl p-5 space-y-3">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] uppercase font-mono font-bold text-accentSlate/50">Networking & Latency</span>
+                                <span className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg"><LucideIcon name="activity" className="w-4 h-4" /></span>
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-black text-white">{loading && !data ? "--" : `${metrics.networking?.average_latency_ms || 0} ms`}</h3>
+                                <div className="flex justify-between text-[10px] text-accentSlate/50 font-mono mt-2">
+                                    <span>Active Conns: {metrics.networking?.active_connections || 0}</span>
+                                    <span className="text-primaryGreen font-bold">API Online</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Filter controls and Audit logs */}
+                    <div className="bg-[#171c24]/30 border border-white/10 rounded-2xl p-6 space-y-5">
+                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-white/5 pb-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    <LucideIcon name="terminal" className="text-primaryGreen" />
+                                    Security & System Audit logs
+                                </h3>
+                                <p className="text-xs text-accentSlate/50 mt-0.5">Real-time audit trails of stream requests, database mutations, and system credentials check</p>
+                            </div>
+                            
+                            {/* Search and Filters */}
+                            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                                <div className="relative flex-1 lg:w-60">
+                                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-accentSlate/40">
+                                        <LucideIcon name="search" className="w-4 h-4" />
+                                    </span>
+                                    <input 
+                                        type="text" 
+                                        value={searchQuery} 
+                                        onChange={e => setSearchQuery(e.target.value)} 
+                                        placeholder="Search audit trail..." 
+                                        className="w-full bg-[#11141a] text-white pl-9 pr-3 py-2 border border-white/10 rounded-xl focus:outline-none focus:border-primaryGreen text-xs" 
+                                    />
+                                </div>
+                                <select 
+                                    value={selectedLevel} 
+                                    onChange={e => setSelectedLevel(e.target.value)}
+                                    className="bg-[#11141a] text-white text-xs border border-white/10 rounded-xl px-3 py-2 focus:outline-none font-bold"
+                                >
+                                    <option value="ALL">All Levels</option>
+                                    <option value="INFO">INFO</option>
+                                    <option value="SUCCESS">SUCCESS</option>
+                                    <option value="WARNING">WARNING</option>
+                                    <option value="ERROR">ERROR</option>
+                                </select>
+                                <select 
+                                    value={selectedCategory} 
+                                    onChange={e => setSelectedCategory(e.target.value)}
+                                    className="bg-[#11141a] text-white text-xs border border-white/10 rounded-xl px-3 py-2 focus:outline-none font-bold"
+                                >
+                                    <option value="ALL">All Categories</option>
+                                    <option value="SYSTEM">SYSTEM</option>
+                                    <option value="AUTH">AUTH</option>
+                                    <option value="STREAM">STREAM</option>
+                                    <option value="DATABASE">DATABASE</option>
+                                    <option value="SECURE">SECURE</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Audit Logs Console View */}
+                        <div className="bg-[#0b0c10] border border-white/10 rounded-xl p-4 font-mono text-xs overflow-hidden flex flex-col">
+                            <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3 text-[10px] text-accentSlate/40 font-bold">
+                                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-primaryGreen animate-ping"></span> SYSTEM_CONSOLE_LIVE_SHELL_LOGS</span>
+                                <span>Showing {filteredLogs.length} of {logs.length} logs</span>
+                            </div>
+                            <div className="space-y-2.5 max-h-[400px] overflow-y-auto pr-2">
+                                {loading && !data ? (
+                                    <div className="py-12 text-center text-accentSlate/40 flex flex-col items-center gap-2">
+                                        <LucideIcon name="refresh-cw" className="w-6 h-6 animate-spin text-primaryGreen" />
+                                        <span>Reading system logs...</span>
+                                    </div>
+                                ) : filteredLogs.length === 0 ? (
+                                    <div className="py-12 text-center text-accentSlate/30">
+                                        No security or diagnostic log matching current filters found.
+                                    </div>
+                                ) : (
+                                    filteredLogs.map((log, idx) => (
+                                        <div key={idx} className="flex flex-col sm:flex-row sm:items-start gap-2.5 p-2 rounded hover:bg-white/[0.02] border border-transparent hover:border-white/5 transition duration-150">
+                                            {/* Time column */}
+                                            <span className="text-accentSlate/40 select-none text-[10px] mt-0.5 shrink-0">
+                                                {new Date(log.timestamp).toLocaleTimeString()}
+                                            </span>
+                                            
+                                            {/* Badges column */}
+                                            <div className="flex items-center gap-1.5 shrink-0 select-none">
+                                                <span className={`text-[9px] font-bold px-2 py-0.5 border rounded-md ${getLevelClass(log.level)}`}>
+                                                    {log.level}
+                                                </span>
+                                                <span className={`text-[9px] font-bold px-2 py-0.5 border rounded-md ${getCategoryClass(log.category)}`}>
+                                                    {log.category}
+                                                </span>
+                                            </div>
+                                            
+                                            {/* Message column */}
+                                            <span className="text-accentSlate/80 leading-relaxed break-all">
+                                                {log.message}
+                                            </span>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Main App Layout
+        function App() {
+            const [user, setUser] = useState(null);
+            const [activeTab, setActiveTab] = useState("overview");
+            const [accentTheme, setAccentTheme] = useState(localStorage.getItem("admin_accent_theme") || "green");
+
+            useEffect(() => {
+                const root = document.documentElement;
+                if (accentTheme === "blue") {
+                    root.style.setProperty("--primary-green-rgb", "59 130 246");
+                } else if (accentTheme === "purple") {
+                    root.style.setProperty("--primary-green-rgb", "168 85 247");
+                } else {
+                    root.style.setProperty("--primary-green-rgb", "0 255 102");
+                }
+                localStorage.setItem("admin_accent_theme", accentTheme);
+            }, [accentTheme]);
+
+            const [movies, setMovies] = useState([]);
+            const [categories, setCategories] = useState([]);
+            const [users, setUsers] = useState([]);
+            const [totalViews, setTotalViews] = useState(0);
+
+            const [loading, setLoading] = useState(false);
+            const [error, setError] = useState("");
+            const [showModal, setShowModal] = useState(false);
+            const [editMovie, setEditMovie] = useState(null);
+
+            useEffect(() => {
+                const handleAuthChanged = () => {
+                    const loaded = localStorage.getItem("matmovies_admin_user");
+                    setUser(loaded ? JSON.parse(loaded) : null);
+                };
+                window.addEventListener("auth_changed", handleAuthChanged);
+                handleAuthChanged();
+                return () => window.removeEventListener("auth_changed", handleAuthChanged);
+            }, []);
+
+            useEffect(() => {
+                if (user) {
+                    fetchData();
+                }
+            }, [user]);
+
+            const fetchData = async () => {
+                setLoading(true);
+                setError("");
+                try {
+                    const [mList, cList, uList] = await Promise.all([
+                        apiCall("/movies").catch(() => []),
+                        apiCall("/categories").catch(() => []),
+                        apiCall("/admin/users").catch(() => [])
+                    ]);
+                    setMovies(mList);
+                    setCategories(cList);
+                    setUsers(uList);
+                    setTotalViews(mList.reduce((acc, m) => acc + (m.viewsCount || m.views_count || 0), 0));
+                } catch (err) {
+                    setError("Communication with SQLite rows warning: Confirm FastAPI endpoints.");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleSaveMovie = async (id, payload) => {
+                if (id) {
+                    const updated = await apiCall(`/movies/${id}`, { method: "PUT", body: payload });
+                    setMovies(movies.map(m => m.id === id ? updated : m));
+                } else {
+                    const created = await apiCall("/movies", { method: "POST", body: payload });
+                    setMovies([created, ...movies]);
+                }
+                fetchData();
+            };
+
+            const handleDeleteMovie = async (id) => {
+                await apiCall(`/movies/${id}`, { method: "DELETE" });
+                setMovies(movies.filter(m => m.id !== id));
+                fetchData();
+            };
+
+            const handleBulkDeleteMovies = async (ids) => {
+                setLoading(true);
+                try {
+                    await Promise.all(ids.map(id => apiCall(`/movies/${id}`, { method: "DELETE" })));
+                    setMovies(movies.filter(m => !ids.includes(m.id)));
+                    fetchData();
+                } catch (err) {
+                    alert("Failed to delete selected content assets.");
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            const handleCreateCategory = async (payload) => {
+                const created = await apiCall("/categories", { method: "POST", body: payload });
+                setCategories([...categories, created]);
+                fetchData();
+            };
+
+            const handleRoleChange = async (userId, role) => {
+                await apiCall(`/admin/users/${userId}/role`, { method: "PUT", body: { role } });
+                setUsers(users.map(u => u.id === userId ? { ...u, role } : u));
+            };
+
+            const handleSubChange = async (userId, tier) => {
+                try {
+                    const response = await fetch(`${getBaseURL()}/admin/users/${userId}/subscription`, {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "Authorization": `Bearer ${localStorage.getItem("matmovies_admin_token")}`
+                        },
+                        body: JSON.stringify({ tier })
+                    });
+                    if (!response.ok) throw new Error();
+                    const updated = await response.json();
+                    setUsers(users.map(u => u.id === userId ? updated : u));
+                } catch {
+                    setUsers(users.map(u => u.id === userId ? { ...u, subscriptionStatus: tier, subscription_status: tier } : u));
+                }
+            };
+
+            const handleDeleteUser = async (userId) => {
+                await apiCall(`/admin/users/${userId}`, { method: "DELETE" });
+                setUsers(users.filter(u => u.id !== userId));
+                fetchData();
+            };
+
+            if (!user) {
+                return <LoginScreen onLoginSuccess={() => window.dispatchEvent(new Event("auth_changed"))} />;
+            }
+
+            return (
+                <div className="min-h-screen bg-darkBg flex flex-col md:flex-row relative">
+                    <div className="absolute top-[-300px] left-[-200px] w-[600px] h-[600px] bg-primaryGreen/5 blur-[120px] pointer-events-none rounded-full"></div>
+
+                    {/* Sidebar Nav */}
+                    <aside className="w-full md:w-60 bg-darkSurface border-b md:border-b-0 md:border-r border-white/10 flex flex-col justify-between shrink-0 relative z-20">
+                        <div>
+                            <div className="p-6 border-b border-white/10 flex items-center gap-2">
+                                <div className="w-8 h-8 bg-primaryGreen/15 border border-primaryGreen/30 rounded-lg flex items-center justify-center">
+                                    <LucideIcon name="play" className="text-primaryGreen fill-primaryGreen w-4 h-4" />
+                                </div>
+                                <span className="text-lg font-black tracking-wider text-white">Mat<span className="text-primaryGreen">Movies</span></span>
+                            </div>
+
+                            <nav className="p-4 space-y-1.5">
+                                {[
+                                    { id: "overview", label: "Overview Center", icon: "layout-dashboard" },
+                                    { id: "movies", label: "Movies Catalog", icon: "film" },
+                                    { id: "categories", label: "Genre Shelves", icon: "layers" },
+                                    { id: "users", label: "User Profiles", icon: "users" },
+                                    { id: "system_logs", label: "System Health & Logs", icon: "activity" },
+                                ].map(tab => (
+                                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-xs font-bold transition ${activeTab === tab.id ? "bg-primaryGreen text-darkBg shadow-[0_4px_10px_rgba(0,255,102,0.1)]" : "text-accentSlate hover:text-white hover:bg-white/5"}`}>
+                                        <LucideIcon name={tab.icon} className="w-4 h-4" />
+                                        {tab.label}
+                                    </button>
+                                ))}
+                            </nav>
+
+                            {/* Accent Theme Selector */}
+                            <div className="p-4 mx-4 mb-4 bg-white/[0.02] border border-white/5 rounded-xl space-y-2">
+                                <span className="text-[10px] uppercase tracking-wider font-semibold text-accentSlate/50 block">Console Accent</span>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setAccentTheme("green")}
+                                        className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border text-[11px] font-bold transition ${
+                                            accentTheme === "green"
+                                                ? "bg-primaryGreen/10 border-primaryGreen text-primaryGreen"
+                                                : "border-white/10 text-accentSlate hover:text-white hover:bg-white/5"
+                                        }`}
+                                    >
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#00FF66]"></div>
+                                        Green
+                                    </button>
+                                    <button
+                                        onClick={() => setAccentTheme("blue")}
+                                        className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border text-[11px] font-bold transition ${
+                                            accentTheme === "blue"
+                                                ? "bg-primaryGreen/10 border-primaryGreen text-primaryGreen"
+                                                : "border-white/10 text-accentSlate hover:text-white hover:bg-white/5"
+                                        }`}
+                                    >
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]"></div>
+                                        Blue
+                                    </button>
+                                    <button
+                                        onClick={() => setAccentTheme("purple")}
+                                        className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg border text-[11px] font-bold transition ${
+                                            accentTheme === "purple"
+                                                ? "bg-primaryGreen/10 border-primaryGreen text-primaryGreen"
+                                                : "border-white/10 text-accentSlate hover:text-white hover:bg-white/5"
+                                        }`}
+                                    >
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#a855f7]"></div>
+                                        Purple
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-4 border-t border-white/10 bg-[#11141a]">
+                            <div className="flex items-center gap-2.5 mb-3 px-1">
+                                <div className="w-8 h-8 rounded-full bg-primaryGreen/15 border border-primaryGreen/30 flex items-center justify-center font-bold text-xs text-primaryGreen font-mono uppercase">{user.username.slice(0, 2)}</div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-bold text-white truncate">{user.username}</p>
+                                    <p className="text-[10px] text-accentSlate/50 font-mono truncate">{user.email}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => { localStorage.clear(); window.dispatchEvent(new Event("auth_changed")); }} className="w-full py-2 bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 text-red-400 font-bold rounded-lg text-xs flex justify-center items-center gap-1.5 transition">
+                                <LucideIcon name="log-out" className="w-3.5 h-3.5" /> Logout Session
+                            </button>
+                        </div>
+                    </aside>
+
+                    {/* Main Workspace */}
+                    <main className="flex-1 flex flex-col relative z-10">
+                        <header className="bg-darkSurface/30 border-b border-white/10 px-8 py-4 flex items-center justify-between">
+                            <h2 className="text-xs uppercase tracking-widest font-mono text-accentSlate/60 flex items-center gap-2">
+                                <span className="w-2 h-2 rounded-full bg-primaryGreen animate-pulse"></span>
+                                {activeTab} workspace
+                                {loading && <LucideIcon name="refresh-cw" className="w-3.5 h-3.5 animate-spin text-primaryGreen" />}
+                            </h2>
+                            <button onClick={fetchData} className="p-2 border border-white/5 hover:bg-white/5 rounded-lg text-accentSlate hover:text-white transition"><LucideIcon name="refresh-cw" className="w-4 h-4" /></button>
+                        </header>
+
+                        <div className="flex-1 p-8 overflow-y-auto max-w-6xl w-full mx-auto">
+                            {error && (
+                                <div className="bg-amber-500/10 border border-amber-500/35 p-4 rounded-xl text-xs text-amber-200 mb-6 flex gap-3">
+                                    <LucideIcon name="alert-triangle" className="text-amber-400 shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="font-bold">FastAPI Connection Warning</p>
+                                        <p className="mt-0.5 text-accentSlate/80">{error}</p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeTab === "overview" && <DashboardOverview movies={movies} categories={categories} users={users} totalViews={totalViews} />}
+                            {activeTab === "movies" && <MovieTable movies={movies} onAdd={() => { setEditMovie(null); setShowModal(true); }} onEdit={(m) => { setEditMovie(m); setShowModal(true); }} onDelete={handleDeleteMovie} onBulkDelete={handleBulkDeleteMovies} />}
+                            {activeTab === "categories" && <CategoryTable categories={categories} onCreate={handleCreateCategory} />}
+                            {activeTab === "users" && <UserTable users={users} currentAdmin={user} onRole={handleRoleChange} onSub={handleSubChange} onDelete={handleDeleteUser} />}
+                            {activeTab === "system_logs" && <SystemLogsPanel />}
+                        </div>
+                    </main>
+
+                    {showModal && <MovieFormModal movie={editMovie} onClose={() => { setShowModal(false); setEditMovie(null); }} onSave={handleSaveMovie} />}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

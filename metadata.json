@@ -1,0 +1,8 @@
+{
+  "name": "Remix: MatMovies",
+  "description": "A feature-rich movie and TV show streaming platform with custom playbacks, history tracking, watchlist, and custom user uploads.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

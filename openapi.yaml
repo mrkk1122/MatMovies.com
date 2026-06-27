@@ -1,0 +1,910 @@
+openapi: 3.0.3
+info:
+  title: MoviesBox FastAPI Backend API
+  description: |
+    This is the comprehensive OpenAPI/Swagger documentation for the **MoviesBox FastAPI backend**. 
+    It details all endpoints for:
+    - **Authentication & Authorization** (User registration, OAuth2 token login, profile management, and role-based permissions).
+    - **Content Management** (Retrieving movies, filtering by categories/genres, searching titles, and admin-level content deployment).
+    - **User Interactions** (Saving watchlists, updating watch progress timestamps, submitting ratings and comments/reviews).
+    
+    The API uses JWT (JSON Web Tokens) in standard HTTP Bearer authorization headers for secure routes.
+  contact:
+    name: MoviesBox Development Team
+    email: support@moviesbox.com
+  version: 1.0.0
+servers:
+  - url: https://api.moviesbox.com/api/v1
+    description: Production Server
+  - url: http://localhost:8000/api/v1
+    description: Local Development Server
+
+paths:
+  # =========================================================================
+  # AUTHENTICATION & USERS
+  # =========================================================================
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Creates a new user profile with a hashed password, standard User role, and Free subscription plan.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegister'
+      responses:
+        '201':
+          description: User registered successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOut'
+        '400':
+          description: Bad request (e.g. Email already registered or invalid inputs).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+
+  /auth/token:
+    post:
+      tags:
+        - Authentication
+      summary: OAuth2 Password Flow Login
+      description: Standard OAuth2-compatible form login. Returns a JWT access token and user info upon valid credentials.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/OAuth2PasswordRequest'
+      responses:
+        '200':
+          description: Successful authentication.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: Incorrect email or password.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+
+  /users/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user profile
+      description: Returns the user profile associated with the provided JWT bearer token.
+      security:
+        - OAuth2Bearer: []
+      responses:
+        '200':
+          description: Successfully fetched current user info.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOut'
+        '401':
+          description: Invalid or expired authentication token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+
+  /users/me/subscription:
+    put:
+      tags:
+        - Authentication
+      summary: Update subscription plan
+      description: Changes the current user's subscription tier. Options are 'Free', 'Premium', or 'VIP'.
+      security:
+        - OAuth2Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionUpdate'
+      responses:
+        '200':
+          description: Subscription upgraded or changed successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserOut'
+        '400':
+          description: Invalid subscription tier specified.
+        '401':
+          description: Unauthorized.
+
+  /admin/users:
+    get:
+      tags:
+        - Administrator Panel
+      summary: Get all registered users (Admin Only)
+      description: Returns a list of all system users. Requires 'Admin' role on the authenticated user.
+      security:
+        - OAuth2Bearer: []
+      responses:
+        '200':
+          description: Successfully retrieved all users.
+          content:
+            application/json:
+              schema:
+                type: array:
+                items:
+                  $ref: '#/components/schemas/UserOut'
+        '401':
+          description: Unauthorized token.
+        '403':
+          description: Forbidden! Requires administrator permissions.
+
+  /admin/users/{userId}/role:
+    put:
+      tags:
+        - Administrator Panel
+      summary: Update user system role (Admin Only)
+      description: Promotes or demotes a user. Role options include 'User' and 'Admin'.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          description: Unique ID (UUID string) of the user to update.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleUpdate'
+      responses:
+        '200':
+          description: User role updated successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "User role changed successfully to Admin."
+        '404':
+          description: User not found.
+
+  # =========================================================================
+  # CONTENT MANAGEMENT (MOVIES & CATEGORIES)
+  # =========================================================================
+  /movies:
+    get:
+      tags:
+        - Content Management
+      summary: Get all movies or filter titles
+      description: Returns a list of all movies in the OTT database, supporting rich filters for categories, banners, and search query strings.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Fuzzy text search query to filter by title, description, or genre.
+          schema:
+            type: string
+        - name: genre
+          in: query
+          required: false
+          description: Filter movies by genre name (e.g., 'Action', 'Sci-Fi').
+          schema:
+            type: string
+        - name: featured
+          in: query
+          required: false
+          description: Set to true to filter movies showing on the hero carousel.
+          schema:
+            type: boolean
+        - name: trending
+          in: query
+          required: false
+          description: Set to true to filter trending movie rows.
+          schema:
+            type: boolean
+        - name: latest
+          in: query
+          required: false
+          description: Set to true to filter newly released movies.
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Successfully retrieved movie list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MovieOut'
+
+    post:
+      tags:
+        - Content Management
+      summary: Deploy and upload new streaming content (Admin Only)
+      description: Creates and deploys a new movie content title to the platform database. Requires admin authorization.
+      security:
+        - OAuth2Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MovieCreate'
+      responses:
+        '201':
+          description: Movie deployed and uploaded successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovieOut'
+        '400':
+          description: Invalid input parameters.
+        '401':
+          description: Unauthorized token.
+        '403':
+          description: Forbidden! Requires administrator role.
+
+  /movies/{movieId}:
+    get:
+      tags:
+        - Content Management
+      summary: Get movie details by ID
+      description: Returns full metadata for a specific movie title including ratings, synopsis, and streaming source link.
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          description: ID of the movie to fetch.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successfully fetched movie metadata.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MovieOut'
+        '404':
+          description: Movie not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPError'
+
+    delete:
+      tags:
+        - Content Management
+      summary: Delete movie content (Admin Only)
+      description: Removes a movie permanently from the database. Requires admin credentials.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          description: ID of the movie to delete.
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Movie deleted successfully. No content returned.
+        '401':
+          description: Unauthorized.
+        '403':
+          description: Forbidden.
+        '404':
+          description: Movie not found.
+
+  /categories:
+    get:
+      tags:
+        - Content Management
+      summary: Get all movie categories/genres
+      description: Lists all available movie categories containing descriptions and vector icon tags.
+      responses:
+        '200':
+          description: Successfully fetched category list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryOut'
+
+    post:
+      tags:
+        - Content Management
+      summary: Create a new category (Admin Only)
+      description: Adds a new category/genre option to the system database.
+      security:
+        - OAuth2Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryCreate'
+      responses:
+        '201':
+          description: Category created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryOut'
+        '400':
+          description: Invalid parameters or category already exists.
+
+  # =========================================================================
+  # USER INTERACTIONS (WATCHLIST, HISTORY, REVIEWS)
+  # =========================================================================
+  /watchlist:
+    get:
+      tags:
+        - User Interactions
+      summary: Retrieve user's watchlist
+      description: Returns the list of all movies currently saved/bookmarked in the authenticated user's watchlist.
+      security:
+        - OAuth2Bearer: []
+      responses:
+        '200':
+          description: Successfully fetched user's watchlist.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MovieOut'
+        '401':
+          description: Unauthorized access.
+
+  /watchlist/{movieId}:
+    post:
+      tags:
+        - User Interactions
+      summary: Add movie to watchlist
+      description: Bookmarks a movie in the authenticated user's account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          description: ID of the movie to add to the watchlist.
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: Movie added to watchlist.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Movie added to your watchlist."
+        '400':
+          description: Movie already in watchlist or invalid ID.
+        '401':
+          description: Unauthorized.
+
+    delete:
+      tags:
+        - User Interactions
+      summary: Remove movie from watchlist
+      description: Removes a bookmarked movie from the authenticated user's account.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          description: ID of the movie to remove from the watchlist.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Movie removed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Movie removed from your watchlist."
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Bookmarked movie not found.
+
+  /history:
+    get:
+      tags:
+        - User Interactions
+      summary: Retrieve recently watched history
+      description: Returns the user's recently watched movies with progress bars and timestamps.
+      security:
+        - OAuth2Bearer: []
+      responses:
+        '200':
+          description: Successfully fetched watch logs.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WatchHistoryOut'
+        '401':
+          description: Unauthorized.
+
+    post:
+      tags:
+        - User Interactions
+      summary: Update watch progress history
+      description: Saves the client playback session progress milliseconds to coordinate resume-watching capabilities. Called automatically during playback.
+      security:
+        - OAuth2Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WatchHistoryUpdate'
+      responses:
+        '200':
+          description: Watch progress saved successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WatchHistoryOut'
+        '401':
+          description: Unauthorized.
+
+    delete:
+      tags:
+        - User Interactions
+      summary: Clear entire watch history
+      description: Permanently wipes out all recent watch sessions for the authenticated user.
+      security:
+        - OAuth2Bearer: []
+      responses:
+        '204':
+          description: Watch history cleared successfully. No content returned.
+        '401':
+          description: Unauthorized.
+
+  /movies/{movieId}/reviews:
+    get:
+      tags:
+        - User Interactions
+      summary: Fetch movie comments and reviews
+      description: Returns all historical reviews, comments, and star ratings left for a specific movie title.
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          description: ID of the movie to fetch reviews for.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successfully fetched movie reviews.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReviewOut'
+        '404':
+          description: Movie not found.
+
+    post:
+      tags:
+        - User Interactions
+      summary: Submit a movie review/comment
+      description: Submits a custom comment and a star rating (1 to 5) for a specific movie.
+      security:
+        - OAuth2Bearer: []
+      parameters:
+        - name: movieId
+          in: path
+          required: true
+          description: ID of the movie to rate/review.
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+      responses:
+        '201':
+          description: Review published successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewOut'
+        '400':
+          description: Invalid input arguments (e.g. rating out of bounds).
+        '401':
+          description: Unauthorized token.
+
+# =========================================================================
+# COMPONENTS SCHEMAS & SCHEMES
+# =========================================================================
+components:
+  securitySchemes:
+    OAuth2Bearer:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Enter JWT Bearer token as `Bearer <your_token_value_here>`
+
+  schemas:
+    # --- Authentication Schemas ---
+    UserRegister:
+      type: object
+      required:
+        - email
+        - password
+        - username
+      properties:
+        email:
+          type: string
+          format: email
+          example: "user@moviesbox.com"
+        password:
+          type: string
+          format: password
+          minLength: 6
+          example: "supersecretpwd"
+        username:
+          type: string
+          minLength: 3
+          example: "Cinephile99"
+
+    OAuth2PasswordRequest:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          description: Email address of the user.
+          example: "user@moviesbox.com"
+        password:
+          type: string
+          format: password
+          example: "supersecretpwd"
+
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOi..."
+        token_type:
+          type: string
+          example: "bearer"
+        user:
+          $ref: '#/components/schemas/UserOut'
+
+    UserOut:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "7b47b85e-dc81-4203-b565-d0c39fdf7f33"
+        email:
+          type: string
+          format: email
+          example: "user@moviesbox.com"
+        username:
+          type: string
+          example: "Cinephile99"
+        role:
+          type: string
+          enum: [User, Admin]
+          example: "User"
+        subscriptionStatus:
+          type: string
+          enum: [Free, Premium, VIP]
+          example: "Free"
+        createdAt:
+          type: integer
+          format: int64
+          description: Epoch timestamp milliseconds
+          example: 1782494394000
+
+    SubscriptionUpdate:
+      type: object
+      required:
+        - tier
+      properties:
+        tier:
+          type: string
+          enum: [Free, Premium, VIP]
+          example: "Premium"
+
+    RoleUpdate:
+      type: object
+      required:
+        - role
+      properties:
+        role:
+          type: string
+          enum: [User, Admin]
+          example: "Admin"
+
+    # --- Content Management Schemas ---
+    MovieCreate:
+      type: object
+      required:
+        - title
+        - description
+        - rating
+        - year
+        - duration
+        - genre
+        - videoUrl
+      properties:
+        title:
+          type: string
+          example: "Galactic Frontiers"
+        description:
+          type: string
+          example: "An interstellar exploration ship gets dragged into a supermassive black hole, discovering a hidden dimension."
+        rating:
+          type: number
+          format: double
+          minimum: 0.0
+          maximum: 5.0
+          example: 4.8
+        year:
+          type: integer
+          example: 2026
+        duration:
+          type: string
+          example: "2h 15m"
+        genre:
+          type: string
+          example: "Sci-Fi, Adventure"
+        posterDrawableName:
+          type: string
+          default: "img_poster_cyberpunk"
+          example: "img_poster_cyberpunk"
+        videoUrl:
+          type: string
+          format: uri
+          example: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        language:
+          type: string
+          default: "English"
+          example: "English"
+        subtitlesUrl:
+          type: string
+          default: ""
+          example: "English (SRT)"
+        isFeatured:
+          type: boolean
+          default: false
+          example: true
+        isTrending:
+          type: boolean
+          default: false
+          example: false
+        isLatest:
+          type: boolean
+          default: false
+          example: true
+
+    MovieOut:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 42
+        title:
+          type: string
+          example: "Dune Chronicles"
+        description:
+          type: string
+          example: "In the far future, a noble family gets involved in a war for control over the galaxy's most valuable asset on a desert planet."
+        rating:
+          type: number
+          format: double
+          example: 4.9
+        year:
+          type: integer
+          example: 2024
+        duration:
+          type: string
+          example: "2h 35m"
+        genre:
+          type: string
+          example: "Sci-Fi, Fantasy"
+        posterDrawableName:
+          type: string
+          example: "img_hero_dune"
+        videoUrl:
+          type: string
+          format: uri
+          example: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+        viewsCount:
+          type: integer
+          example: 12400
+        isTrending:
+          type: boolean
+          example: true
+        isFeatured:
+          type: boolean
+          example: true
+        isLatest:
+          type: boolean
+          example: false
+        language:
+          type: string
+          example: "English"
+        subtitlesUrl:
+          type: string
+          example: "English (SRT)"
+        isUploadedByUser:
+          type: boolean
+          example: false
+
+    CategoryCreate:
+      type: object
+      required:
+        - name
+        - description
+        - iconName
+      properties:
+        name:
+          type: string
+          example: "Documentaries"
+        description:
+          type: string
+          example: "True stories, nature profiles, and historical investigations"
+        iconName:
+          type: string
+          example: "public"
+
+    CategoryOut:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        name:
+          type: string
+          example: "Action"
+        description:
+          type: string
+          example: "Thrilling fights and car chases"
+        iconName:
+          type: string
+          example: "local_fire_department"
+
+    # --- User Interaction Schemas ---
+    WatchHistoryOut:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 120
+        userId:
+          type: string
+          format: uuid
+          example: "7b47b85e-dc81-4203-b565-d0c39fdf7f33"
+        movie:
+          $ref: '#/components/schemas/MovieOut'
+        progressMs:
+          type: integer
+          format: int64
+          example: 2400000
+        durationMs:
+          type: integer
+          format: int64
+          example: 7200000
+        lastWatchedTimestamp:
+          type: integer
+          format: int64
+          example: 1782494405000
+
+    WatchHistoryUpdate:
+      type: object
+      required:
+        - movieId
+        - progressMs
+        - durationMs
+      properties:
+        movieId:
+          type: integer
+          example: 42
+        progressMs:
+          type: integer
+          format: int64
+          description: Playback progress in milliseconds
+          example: 2400000
+        durationMs:
+          type: integer
+          format: int64
+          description: Total movie duration in milliseconds
+          example: 7200000
+
+    ReviewCreate:
+      type: object
+      required:
+        - rating
+        - comment
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          example: 5
+        comment:
+          type: string
+          minLength: 2
+          example: "This sci-fi movie is absolutely sensational! The acting and soundtrack are superb."
+
+    ReviewOut:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 8
+        userId:
+          type: string
+          format: uuid
+          example: "7b47b85e-dc81-4203-b565-d0c39fdf7f33"
+        username:
+          type: string
+          example: "Cinephile99"
+        movieId:
+          type: integer
+          example: 42
+        rating:
+          type: integer
+          example: 5
+        comment:
+          type: string
+          example: "This sci-fi movie is absolutely sensational! The acting and soundtrack are superb."
+        timestamp:
+          type: integer
+          format: int64
+          example: 1782494405615
+
+    # --- Error Schemas ---
+    HTTPError:
+      type: object
+      properties:
+        detail:
+          type: string
+          example: "Requested resource not found or invalid."
