@@ -28,6 +28,9 @@ class MovieViewModel(private val movieRepository: MovieRepository) : ViewModel()
     val latestMovies: StateFlow<List<MovieEntity>> = movieRepository.latestMovies
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val upcomingMovies: StateFlow<List<MovieEntity>> = movieRepository.upcomingMovies
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     val categories: StateFlow<List<CategoryEntity>> = movieRepository.categories
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 

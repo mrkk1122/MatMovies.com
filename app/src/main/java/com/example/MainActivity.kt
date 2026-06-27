@@ -157,6 +157,14 @@ fun MoviesAppNavigation(
             )
         }
 
+        // Upcoming Movies Screen
+        composable(Screen.Upcoming.route) {
+            UpcomingMoviesScreen(
+                navController = navController,
+                movieViewModel = movieViewModel
+            )
+        }
+
         // Admin Console Dashboard Screen
         composable(Screen.AdminDashboard.route) {
             AdminDashboardScreen(navController = navController, movieViewModel = movieViewModel)

@@ -25,4 +25,6 @@ sealed class Screen(val route: String) {
     object CategoryMovies : Screen("category/{categoryName}") {
         fun createRoute(categoryName: String) = "category/$categoryName"
     }
+
+    object Upcoming : Screen("upcoming")
 }

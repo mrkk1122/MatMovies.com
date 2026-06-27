@@ -15,7 +15,7 @@ import com.example.data.model.*
         WatchlistEntity::class,
         ReviewEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

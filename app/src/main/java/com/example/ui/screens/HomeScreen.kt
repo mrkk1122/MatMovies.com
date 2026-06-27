@@ -336,7 +336,7 @@ fun HomeScreen(
                                     append("Movies")
                                 }
                             },
-                            fontSize = 32.sp,
+                            fontSize = 38.sp, // Made app name slightly larger
                             style = TextStyle(
                                 shadow = Shadow(
                                     color = Color.Black.copy(alpha = 0.5f),
@@ -349,72 +349,35 @@ fun HomeScreen(
                         
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // Sleek top right Search icon action
+                            // Sleek top right Search raw icon action (no background container)
                             IconButton(
                                 onClick = { isSearchExpanded = true },
                                 modifier = Modifier
                                     .testTag("home_search_toggle_btn")
                                     .size(44.dp)
-                                    .background(
-                                        brush = Brush.radialGradient(
-                                            colors = listOf(
-                                                Color.White.copy(alpha = 0.12f),
-                                                Color.White.copy(alpha = 0.03f)
-                                            )
-                                        ),
-                                        shape = RoundedCornerShape(14.dp)
-                                    )
-                                    .border(
-                                        width = 1.dp,
-                                        brush = Brush.linearGradient(
-                                            colors = listOf(
-                                                Color.White.copy(alpha = 0.2f),
-                                                Color.Transparent
-                                            )
-                                        ),
-                                        shape = RoundedCornerShape(14.dp)
-                                    )
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Search,
                                     contentDescription = "Open Search",
                                     tint = Color(0xFFFFB300),
-                                    modifier = Modifier.size(20.dp)
+                                    modifier = Modifier.size(26.dp)
                                 )
                             }
 
+                            // Sleek top right Notifications raw icon action (no background container)
                             IconButton(
                                 onClick = { navController.navigate(Screen.Notifications.route) },
                                 modifier = Modifier
                                     .size(44.dp)
-                                    .background(
-                                        brush = Brush.radialGradient(
-                                            colors = listOf(
-                                                Color.White.copy(alpha = 0.12f),
-                                                Color.White.copy(alpha = 0.03f)
-                                            )
-                                        ),
-                                        shape = RoundedCornerShape(14.dp)
-                                    )
-                                    .border(
-                                        width = 1.dp,
-                                        brush = Brush.linearGradient(
-                                            colors = listOf(
-                                                Color.White.copy(alpha = 0.2f),
-                                                Color.Transparent
-                                            )
-                                        ),
-                                        shape = RoundedCornerShape(14.dp)
-                                    )
                             ) {
-                                Box(modifier = Modifier.size(20.dp)) {
+                                Box(modifier = Modifier.size(26.dp)) {
                                     Icon(
                                         imageVector = Icons.Default.Notifications,
                                         contentDescription = "Notifications",
                                         tint = Color.White,
-                                        modifier = Modifier.align(Alignment.Center)
+                                        modifier = Modifier.align(Alignment.Center).size(26.dp)
                                     )
                                     // Add a small crimson badge to notify the user of updates!
                                     Box(
@@ -438,12 +401,34 @@ fun HomeScreen(
                         .padding(horizontal = 8.dp, vertical = 6.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    val filters = listOf("All", "Sci-Fi", "Action", "Fantasy", "Drama")
+                    val filters = listOf(
+                        "All",
+                        "🔥Trending Now",
+                        "Latest Releases",
+                        "Most trending",
+                        "bangla natok",
+                        "bangladesh TV",
+                        "Best bangla Dramas",
+                        "Top web Series",
+                        "Top Series This Week 🔝",
+                        "Hollywood",
+                        "South Indian",
+                        "Bollywood",
+                        "Short TV",
+                        "🔥Cinema",
+                        "Upcoming ⏰"
+                    )
                     items(filters) { filter ->
                         CustomFilterChip(
                             text = filter,
                             selected = selectedGenreFilter == filter,
-                            onClick = { selectedGenreFilter = filter }
+                            onClick = {
+                                if (filter == "Upcoming ⏰") {
+                                    navController.navigate(Screen.Upcoming.route)
+                                } else {
+                                    selectedGenreFilter = filter
+                                }
+                            }
                         )
                     }
                 }
@@ -455,7 +440,7 @@ fun HomeScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(450.dp)
+                                    .height(520.dp) // Taller loading state height
                                     .padding(horizontal = 8.dp, vertical = 12.dp)
                                     .clip(RoundedCornerShape(20.dp))
                                     .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)),
@@ -468,7 +453,7 @@ fun HomeScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(450.dp)
+                                    .height(520.dp) // Taller error state height
                                     .padding(horizontal = 8.dp, vertical = 12.dp)
                                     .clip(RoundedCornerShape(20.dp))
                                     .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f)),
@@ -488,16 +473,21 @@ fun HomeScreen(
                             if (totalTrending > 0) {
                                 val pagerState = rememberPagerState(pageCount = { totalTrending })
                                 
-                                LaunchedEffect(pagerState.currentPage) {
-                                    kotlinx.coroutines.delay(6000)
-                                    val nextPage = (pagerState.currentPage + 1) % totalTrending
-                                    pagerState.animateScrollToPage(nextPage)
+                                LaunchedEffect(key1 = true) {
+                                    while (true) {
+                                        kotlinx.coroutines.delay(3500)
+                                        val nextPage = (pagerState.currentPage + 1) % totalTrending
+                                        pagerState.animateScrollToPage(
+                                            page = nextPage,
+                                            animationSpec = androidx.compose.animation.core.tween(durationMillis = 850)
+                                        )
+                                    }
                                 }
                                 
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(450.dp)
+                                        .height(520.dp) // Taller hero carousel height
                                         .padding(horizontal = 8.dp, vertical = 12.dp)
                                 ) {
                                     HorizontalPager(
@@ -696,82 +686,401 @@ fun HomeScreen(
                     }
                 }
 
-                // Trending Movies Section with Quick Watchlist Action & Netflix-style ranking
-                val filteredTrending = if (selectedGenreFilter == "All") trendingMovies else trendingMovies.filter { it.genre.contains(selectedGenreFilter, ignoreCase = true) }
-                if (filteredTrending.isNotEmpty()) {
-                    SectionHeader(
-                        title = "Trending Now",
-                        onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("Trending")) }
-                    )
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        items(filteredTrending.size) { index ->
-                            val movie = filteredTrending[index]
-                            TrendingMovieCard(
-                                rank = index + 1,
-                                movie = movie,
-                                onClick = {
-                                    navController.navigate(Screen.MovieDetails.createRoute(movie.id))
-                                },
-                                isInWatchlist = watchlist.any { it.id == movie.id },
-                                onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
-                            )
+                // Popular Bangla & Indian Sections (Displayed under "Explore Genres")
+                if (selectedGenreFilter == "All") {
+                    // Category 1: 🔥Trending Now
+                    if (trendingMovies.isNotEmpty()) {
+                        SectionHeader(
+                            title = "🔥Trending Now",
+                            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("🔥Trending Now")) }
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            items(trendingMovies.size) { index ->
+                                val movie = trendingMovies[index]
+                                TrendingMovieCard(
+                                    rank = index + 1,
+                                    movie = movie,
+                                    onClick = {
+                                        navController.navigate(Screen.MovieDetails.createRoute(movie.id))
+                                    },
+                                    isInWatchlist = watchlist.any { it.id == movie.id },
+                                    onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
+                                )
+                            }
                         }
                     }
-                }
 
-                // Latest Releases Section with Quick Watchlist Action
-                val filteredLatest = if (selectedGenreFilter == "All") latestMovies else latestMovies.filter { it.genre.contains(selectedGenreFilter, ignoreCase = true) }
-                if (filteredLatest.isNotEmpty()) {
-                    SectionHeader(
-                        title = "Latest Releases",
-                        onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("Latest")) }
-                    )
-                    LazyRow(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        items(filteredLatest) { movie ->
-                            MovieCard(
-                                movie = movie,
-                                onClick = {
-                                    navController.navigate(Screen.MovieDetails.createRoute(movie.id))
-                                },
-                                isInWatchlist = watchlist.any { it.id == movie.id },
-                                onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
-                            )
+                    // Category 2: latest releases
+                    if (latestMovies.isNotEmpty()) {
+                        SectionHeader(
+                            title = "latest releases ✨",
+                            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("Latest Releases")) }
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(latestMovies) { movie ->
+                                MovieCard(
+                                    movie = movie,
+                                    onClick = {
+                                        navController.navigate(Screen.MovieDetails.createRoute(movie.id))
+                                    },
+                                    isInWatchlist = watchlist.any { it.id == movie.id },
+                                    onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
+                                )
+                            }
                         }
                     }
-                }
 
-                // Empty / Not Found Fallback filter state
-                if (filteredLatest.isEmpty() && filteredTrending.isEmpty() && featuredMovies.isEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(40.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Default.MovieFilter,
-                                contentDescription = "No movies",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                                modifier = Modifier.size(64.dp)
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(
-                                text = "No movies match this genre",
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontSize = 14.sp
-                            )
+                    // Category 3: Most trending
+                    val mostTrending = allMovies.filter { it.genre.contains("Most trending", ignoreCase = true) }
+                    if (mostTrending.isNotEmpty()) {
+                        SectionHeader(
+                            title = "Most trending 🔥",
+                            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("Most trending")) }
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(mostTrending) { movie ->
+                                MovieCard(
+                                    movie = movie,
+                                    onClick = { navController.navigate(Screen.MovieDetails.createRoute(movie.id)) },
+                                    isInWatchlist = watchlist.any { it.id == movie.id },
+                                    onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Category 4: bangla natok
+                    val banglaNatok = allMovies.filter { it.genre.contains("bangla natok", ignoreCase = true) }
+                    if (banglaNatok.isNotEmpty()) {
+                        SectionHeader(
+                            title = "bangla natok 🎭",
+                            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("bangla natok")) }
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(banglaNatok) { movie ->
+                                MovieCard(
+                                    movie = movie,
+                                    onClick = { navController.navigate(Screen.MovieDetails.createRoute(movie.id)) },
+                                    isInWatchlist = watchlist.any { it.id == movie.id },
+                                    onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Category 5: bangladesh TV
+                    val bangladeshTv = allMovies.filter { it.genre.contains("bangladesh TV", ignoreCase = true) }
+                    if (bangladeshTv.isNotEmpty()) {
+                        SectionHeader(
+                            title = "bangladesh TV 📺",
+                            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("bangladesh TV")) }
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(bangladeshTv) { movie ->
+                                MovieCard(
+                                    movie = movie,
+                                    onClick = { navController.navigate(Screen.MovieDetails.createRoute(movie.id)) },
+                                    isInWatchlist = watchlist.any { it.id == movie.id },
+                                    onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Category 6: Best bangla Dramas
+                    val bestBanglaDramas = allMovies.filter { it.genre.contains("Best bangla Dramas", ignoreCase = true) || it.genre.contains("bangla Dramas", ignoreCase = true) }
+                    if (bestBanglaDramas.isNotEmpty()) {
+                        SectionHeader(
+                            title = "Best bangla Dramas 🌟",
+                            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("Best bangla Dramas")) }
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(bestBanglaDramas) { movie ->
+                                MovieCard(
+                                    movie = movie,
+                                    onClick = { navController.navigate(Screen.MovieDetails.createRoute(movie.id)) },
+                                    isInWatchlist = watchlist.any { it.id == movie.id },
+                                    onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Category 7: Top web Series
+                    val topWebSeries = allMovies.filter { it.genre.contains("Top web Series", ignoreCase = true) || it.genre.contains("Top Anime Series", ignoreCase = true) }
+                    if (topWebSeries.isNotEmpty()) {
+                        SectionHeader(
+                            title = "Top web Series 💎",
+                            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("Top web Series")) }
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(topWebSeries) { movie ->
+                                MovieCard(
+                                    movie = movie,
+                                    onClick = { navController.navigate(Screen.MovieDetails.createRoute(movie.id)) },
+                                    isInWatchlist = watchlist.any { it.id == movie.id },
+                                    onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Category 8: Top Series This Week 🔝
+                    val topSeriesThisWeek = allMovies.filter { it.genre.contains("Top Series This Week", ignoreCase = true) }
+                    if (topSeriesThisWeek.isNotEmpty()) {
+                        SectionHeader(
+                            title = "Top Series This Week 🔝",
+                            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("Top Series This Week 🔝")) }
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(topSeriesThisWeek) { movie ->
+                                MovieCard(
+                                    movie = movie,
+                                    onClick = { navController.navigate(Screen.MovieDetails.createRoute(movie.id)) },
+                                    isInWatchlist = watchlist.any { it.id == movie.id },
+                                    onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
+                                )
+                            }
+                        }
+                    }
+
+                    // --- SECONDARY HERO BANNER ---
+                    val secondaryHeroMovie = allMovies.find { it.title.contains("Avatar", ignoreCase = true) }
+                        ?: allMovies.find { it.isFeatured }
+                        ?: allMovies.firstOrNull()
+
+                    if (secondaryHeroMovie != null) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        SecondaryHeroBanner(
+                            movie = secondaryHeroMovie,
+                            onClick = { navController.navigate(Screen.MovieDetails.createRoute(secondaryHeroMovie.id)) },
+                            onPlayClick = { navController.navigate(Screen.Player.createRoute(secondaryHeroMovie.id)) },
+                            isInWatchlist = watchlist.any { it.id == secondaryHeroMovie.id },
+                            onToggleWatchlist = { movieViewModel.toggleWatchlist(secondaryHeroMovie.id) }
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
+                    // --- CATEGORIES UNDER THE SECONDARY HERO BANNER ---
+                    // Category 9: Hollywood
+                    val hollywoodMovies = allMovies.filter { it.genre.contains("Hollywood", ignoreCase = true) }
+                    if (hollywoodMovies.isNotEmpty()) {
+                        SectionHeader(
+                            title = "Hollywood 🎬",
+                            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("Hollywood")) }
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(hollywoodMovies) { movie ->
+                                MovieCard(
+                                    movie = movie,
+                                    onClick = { navController.navigate(Screen.MovieDetails.createRoute(movie.id)) },
+                                    isInWatchlist = watchlist.any { it.id == movie.id },
+                                    onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Category 10: South Indian
+                    val southIndianMovies = allMovies.filter { it.genre.contains("South Indian", ignoreCase = true) }
+                    if (southIndianMovies.isNotEmpty()) {
+                        SectionHeader(
+                            title = "South Indian 🔥",
+                            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("South Indian")) }
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(southIndianMovies) { movie ->
+                                MovieCard(
+                                    movie = movie,
+                                    onClick = { navController.navigate(Screen.MovieDetails.createRoute(movie.id)) },
+                                    isInWatchlist = watchlist.any { it.id == movie.id },
+                                    onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Category 11: Bollywood
+                    val bollywoodMovies = allMovies.filter { it.genre.contains("Bollywood", ignoreCase = true) }
+                    if (bollywoodMovies.isNotEmpty()) {
+                        SectionHeader(
+                            title = "Bollywood ✨",
+                            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("Bollywood")) }
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(bollywoodMovies) { movie ->
+                                MovieCard(
+                                    movie = movie,
+                                    onClick = { navController.navigate(Screen.MovieDetails.createRoute(movie.id)) },
+                                    isInWatchlist = watchlist.any { it.id == movie.id },
+                                    onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Category 12: Short TV
+                    val shortTvMovies = allMovies.filter { it.genre.contains("Short TV", ignoreCase = true) }
+                    if (shortTvMovies.isNotEmpty()) {
+                        SectionHeader(
+                            title = "Short TV 📱",
+                            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("Short TV")) }
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(shortTvMovies) { movie ->
+                                MovieCard(
+                                    movie = movie,
+                                    onClick = { navController.navigate(Screen.MovieDetails.createRoute(movie.id)) },
+                                    isInWatchlist = watchlist.any { it.id == movie.id },
+                                    onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
+                                )
+                            }
+                        }
+                    }
+
+                    // Category 13: 🔥Cinema
+                    val cinemaMovies = allMovies.filter { it.genre.contains("🔥Cinema", ignoreCase = true) }
+                    if (cinemaMovies.isNotEmpty()) {
+                        SectionHeader(
+                            title = "🔥Cinema 🍿",
+                            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("🔥Cinema")) }
+                        )
+                        LazyRow(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        ) {
+                            items(cinemaMovies) { movie ->
+                                MovieCard(
+                                    movie = movie,
+                                    onClick = { navController.navigate(Screen.MovieDetails.createRoute(movie.id)) },
+                                    isInWatchlist = watchlist.any { it.id == movie.id },
+                                    onToggleWatchlist = { movieViewModel.toggleWatchlist(movie.id) }
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Category-Filtered View Grid for Home Screen Category selection
+                    val genreMovies = allMovies.filter { it.genre.contains(selectedGenreFilter, ignoreCase = true) }
+                    
+                    SectionHeader(
+                        title = "$selectedGenreFilter Highlights",
+                        onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute(selectedGenreFilter)) }
+                    )
+                    
+                    if (genreMovies.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(40.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Default.MovieFilter,
+                                    contentDescription = "No movies found",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(64.dp)
+                                )
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "No movies in this category yet",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    } else {
+                        val chunkedGenreMovies = genreMovies.chunked(2)
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            chunkedGenreMovies.forEach { rowMovies ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    rowMovies.forEach { movie ->
+                                        Box(modifier = Modifier.weight(1f)) {
+                                            DiscoverMovieCard(
+                                                movie = movie,
+                                                onClick = {
+                                                    navController.navigate(Screen.MovieDetails.createRoute(movie.id))
+                                                }
+                                            )
+                                        }
+                                    }
+                                    if (rowMovies.size < 2) {
+                                        Spacer(modifier = Modifier.weight(1f))
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -890,13 +1199,13 @@ fun CustomFilterChip(
                 shape = RoundedCornerShape(20.dp)
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 4.dp), // Thinner container padding
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = text,
             color = if (selected) Color.Black else Color.White.copy(alpha = 0.85f),
-            fontSize = 13.sp,
+            fontSize = 12.sp, // Slimmer font size
             fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.SemiBold
         )
     }
@@ -911,192 +1220,97 @@ fun CinePickCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 8.dp, vertical = 14.dp)
-            .clip(RoundedCornerShape(24.dp))
+            .padding(horizontal = 8.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(16.dp))
             .border(
-                width = 1.2.dp,
+                width = 1.dp,
                 brush = Brush.horizontalGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.primary,
                         MaterialTheme.colorScheme.secondary
                     )
                 ),
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(16.dp)
             )
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1C1822))
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(160.dp)
+                .height(95.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             val drawableId = DrawableHelper.getDrawableIdByName(movie.posterDrawableName)
             Image(
                 painter = painterResource(id = drawableId),
-                contentDescription = "CinePick of the Day",
-                modifier = Modifier.fillMaxSize(),
+                contentDescription = "CinePick Poster",
+                modifier = Modifier
+                    .width(130.dp)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(topStart = 16.dp, bottomStart = 16.dp)),
                 contentScale = ContentScale.Crop
             )
-            
-            // Soft cinematic gradient overlay
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color.Black.copy(alpha = 0.2f),
-                                Color.Black.copy(alpha = 0.95f)
-                            )
-                        )
-                    )
-            )
-            
-            // "98% Match" Tag
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF00C853)),
-                    shape = RoundedCornerShape(8.dp),
-                    border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.TrendingUp,
-                            contentDescription = "Trending match",
-                            tint = Color.White,
-                            modifier = Modifier.size(10.dp)
-                        )
-                        Text(
-                            text = "98% MATCH",
-                            color = Color.White,
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
-                }
-            }
 
-            // Top Left Pick tag
-            Row(
-                modifier = Modifier
-                    .align(Alignment.TopStart)
-                    .padding(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "Pick icon",
-                            tint = Color.Black,
-                            modifier = Modifier.size(10.dp)
-                        )
-                        Text(
-                            text = "SMART CINEPICK",
-                            color = Color.Black,
-                            fontSize = 8.sp,
-                            fontWeight = FontWeight.Black
-                        )
-                    }
-                }
-            }
-
-            // Content overlay at bottom
             Column(
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(12.dp)
+                    .weight(1f)
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.Center
             ) {
-                Text(
-                    text = movie.title,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Black,
-                    color = Color.White,
-                    style = LocalTextStyle.current.copy(
-                        shadow = androidx.compose.ui.graphics.Shadow(
-                            color = Color.Black.copy(alpha = 0.8f),
-                            offset = androidx.compose.ui.geometry.Offset(2f, 2f),
-                            blurRadius = 6f
-                        )
-                    )
-                )
-                
-                Spacer(modifier = Modifier.height(2.dp))
-                
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(
-                        text = "${movie.year} • ${movie.genre} • ${movie.duration}",
-                        fontSize = 10.sp,
-                        color = Color.White.copy(alpha = 0.9f)
+                    Icon(
+                        imageVector = Icons.Default.AutoAwesome,
+                        contentDescription = "Sparkle",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(10.dp)
                     )
-                    
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Star,
-                            contentDescription = "Rating",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(10.dp)
-                        )
-                        Text(
-                            text = movie.rating.toString(),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
-                        )
-                    }
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = {
-                            onPlayClick()
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp),
-                        modifier = Modifier.height(28.dp)
-                    ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Play", tint = Color.Black, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Instant Stream", color = Color.Black, fontWeight = FontWeight.ExtraBold, fontSize = 10.sp)
-                    }
-                    
                     Text(
-                        text = "Curated based on your preferences",
-                        color = Color.White.copy(alpha = 0.7f),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold
+                        text = "SMART CINEPICK • 98% MATCH",
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Black
                     )
                 }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = movie.title,
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = "${movie.year} • ${movie.genre}",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 10.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            IconButton(
+                onClick = onPlayClick,
+                modifier = Modifier
+                    .padding(end = 12.dp)
+                    .size(36.dp)
+                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PlayArrow,
+                    contentDescription = "Play Spotlight",
+                    tint = Color.Black,
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }
@@ -1666,6 +1880,140 @@ fun DiscoverMovieCard(
                         tint = Color.White.copy(alpha = 0.8f),
                         modifier = Modifier.size(18.dp)
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SecondaryHeroBanner(
+    movie: MovieEntity,
+    onClick: () -> Unit,
+    onPlayClick: () -> Unit,
+    isInWatchlist: Boolean,
+    onToggleWatchlist: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(220.dp)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF100B1A))
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            val drawableId = DrawableHelper.getDrawableIdByName(movie.posterDrawableName)
+            Image(
+                painter = painterResource(id = drawableId),
+                contentDescription = "Featured Billboard Poster",
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+
+            // Dynamic scrim gradient overlay for epic legibility
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.5f),
+                                Color.Black.copy(alpha = 0.95f)
+                            )
+                        )
+                    )
+            )
+
+            // Text Info & Quick Actions
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.BottomStart)
+                    .padding(16.dp)
+            ) {
+                // Category Tag
+                Box(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "EXCLUSIVE PREMIERE 🌟",
+                        color = Color.Black,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 1.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
+                    text = movie.title,
+                    color = Color.White,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Text(
+                    text = "${movie.genre} • ${movie.duration} • ${movie.year}",
+                    color = Color.White.copy(alpha = 0.75f),
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Button(
+                        onClick = onPlayClick,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                        modifier = Modifier.height(34.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PlayArrow,
+                            contentDescription = "Play icon",
+                            tint = Color.Black,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(text = "Play", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    OutlinedButton(
+                        onClick = onToggleWatchlist,
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                        modifier = Modifier.height(34.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (isInWatchlist) Icons.Default.Check else Icons.Default.Add,
+                            contentDescription = "Watchlist icon",
+                            tint = Color.White,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (isInWatchlist) "In Watchlist" else "My List",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }

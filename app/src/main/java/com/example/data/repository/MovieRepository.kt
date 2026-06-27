@@ -12,6 +12,7 @@ class MovieRepository(private val movieDao: MovieDao) {
     val featuredMovies: Flow<List<MovieEntity>> = movieDao.getFeaturedMovies()
     val trendingMovies: Flow<List<MovieEntity>> = movieDao.getTrendingMovies()
     val latestMovies: Flow<List<MovieEntity>> = movieDao.getLatestMovies()
+    val upcomingMovies: Flow<List<MovieEntity>> = movieDao.getUpcomingMovies()
     val categories: Flow<List<CategoryEntity>> = movieDao.getAllCategories()
 
     fun searchMovies(query: String): Flow<List<MovieEntity>> = movieDao.searchMovies(query)
@@ -97,17 +98,26 @@ class MovieRepository(private val movieDao: MovieDao) {
     // Pre-populate if database is empty or has very few items
     suspend fun prepopulateDatabaseIfEmpty() = withContext(Dispatchers.IO) {
         val movieCount = movieDao.getMovieCount()
-        if (movieCount < 40) {
+        if (movieCount < 100) {
             // Clear existing to avoid duplicates when upgrading
             movieDao.deleteAllMovies()
             movieDao.deleteAllCategories()
 
-            // Add default categories
+            // Add default categories matching user list exactly
             val defaultCategories = listOf(
-                CategoryEntity(name = "Action", description = "Thrilling fights and car chases", iconName = "local_fire_department"),
-                CategoryEntity(name = "Sci-Fi", description = "Futuristic science and outer space adventures", iconName = "science"),
-                CategoryEntity(name = "Fantasy", description = "Magic, ancient worlds, and mystical creatures", iconName = "auto_awesome"),
-                CategoryEntity(name = "Drama", description = "Deep emotional stories and human connections", iconName = "theater_comedy")
+                CategoryEntity(name = "🔥Trending Now", description = "Viral trending shows and videos", iconName = "trending_up"),
+                CategoryEntity(name = "Latest Releases", description = "Just released on MatMovies", iconName = "new_releases"),
+                CategoryEntity(name = "Most trending", description = "The hottest content right now", iconName = "whatshot"),
+                CategoryEntity(name = "bangla natok", description = "Beautiful local theater and stories", iconName = "theater_comedy"),
+                CategoryEntity(name = "bangladesh TV", description = "Live and recorded TV shows of Bangladesh", iconName = "tv"),
+                CategoryEntity(name = "Best bangla Dramas", description = "Most loved Bangla serials", iconName = "live_tv"),
+                CategoryEntity(name = "Top web Series", description = "Top quality web series collection", iconName = "dns"),
+                CategoryEntity(name = "Top Series This Week 🔝", description = "Global top series of the week", iconName = "star"),
+                CategoryEntity(name = "Hollywood", description = "Blockbuster English movies", iconName = "movie"),
+                CategoryEntity(name = "South Indian", description = "Action-packed South Indian masterpieces", iconName = "explore"),
+                CategoryEntity(name = "Bollywood", description = "High drama and musical Bollywood films", iconName = "movie_filter"),
+                CategoryEntity(name = "Short TV", description = "Quick, byte-sized series for on-the-go viewing", iconName = "slideshow"),
+                CategoryEntity(name = "🔥Cinema", description = "Pure cinematic blockbusters", iconName = "local_fire_department")
             )
             for (cat in defaultCategories) {
                 movieDao.insertCategory(cat)
@@ -130,66 +140,99 @@ class MovieRepository(private val movieDao: MovieDao) {
             // Add premium, fully working default movies
             val defaultMovies = listOf(
                 MovieEntity(
-                    title = "Dune Chronicles",
-                    description = "In the far future, a noble family gets involved in a war for control over the galaxy's most valuable asset on a dangerous desert planet.",
+                    title = "Bachelor Point - Season 4",
+                    description = "An ultra-popular Bangladeshi comedy drama series following the hilarious lives of bachelor friends living together in Dhaka.",
                     rating = 4.9,
                     year = 2024,
-                    duration = "2h 35m",
-                    genre = "Sci-Fi, Fantasy",
+                    duration = "45m",
+                    genre = "bangla natok, bangladesh TV, Best bangla Dramas, Most trending, 🔥Trending Now, Top web Series",
                     posterDrawableName = "img_hero_dune",
                     videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-                    viewsCount = 12400,
+                    viewsCount = 45000,
                     isFeatured = true,
                     isTrending = true,
-                    language = "English",
+                    language = "Bengali",
                     subtitlesUrl = "English (SRT)"
                 ),
                 MovieEntity(
-                    title = "Cyberpunk Neo",
-                    description = "In a glowing metropolis powered by cybernetic enhancements, a mercenary takes on a dangerous heist that could change humanity forever.",
-                    rating = 4.7,
-                    year = 2023,
-                    duration = "2h 10m",
-                    genre = "Sci-Fi, Action",
+                    title = "Pushpa 2: The Rule",
+                    description = "The highly anticipated continuation of Pushpa's rise through the red sandalwood smuggling syndicate, clashing with law enforcement.",
+                    rating = 4.9,
+                    year = 2025,
+                    duration = "2h 45m",
+                    genre = "South Indian, Bollywood, 🔥Cinema, 🔥Trending Now, Most trending",
                     posterDrawableName = "img_poster_cyberpunk",
                     videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-                    viewsCount = 9850,
+                    viewsCount = 120000,
+                    isFeatured = true,
+                    isTrending = true,
+                    isUpcoming = true,
+                    language = "Hindi, Telugu",
+                    subtitlesUrl = "English (SRT)"
+                ),
+                MovieEntity(
+                    title = "Solo Leveling",
+                    description = "In a world of hunters, the weakest hunter Jinwoo Sung gets a second chance and climbs to become the ultimate monarch.",
+                    rating = 4.8,
+                    year = 2024,
+                    duration = "24m",
+                    genre = "Top web Series, Top Series This Week 🔝",
+                    posterDrawableName = "img_poster_fantasy",
+                    videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+                    viewsCount = 35000,
                     isFeatured = false,
                     isTrending = true,
                     isLatest = true,
-                    language = "English",
-                    subtitlesUrl = "English (SRT), Spanish (SRT)"
+                    language = "Japanese",
+                    subtitlesUrl = "English, Bangla"
                 ),
                 MovieEntity(
-                    title = "The Ancient Portal",
-                    description = "A group of archeologists uncovers an ancient mystical gateway in a dense green forest, leading to an uncharted realm of mythical creatures.",
-                    rating = 4.8,
+                    title = "Avatar: Fire and Ash",
+                    description = "The next majestic chapter on Pandora where Jake Sully and Neytiri encounter a dangerous, aggressive volcanic tribe of Na'vi.",
+                    rating = 4.9,
                     year = 2025,
-                    duration = "1h 55m",
-                    genre = "Fantasy, Adventure",
+                    duration = "2h 55m",
+                    genre = "Hollywood, 🔥Cinema, Most trending, 🔥Trending Now",
+                    posterDrawableName = "img_hero_dune",
+                    videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
+                    viewsCount = 95000,
+                    isFeatured = true,
+                    isTrending = false,
+                    isUpcoming = true,
+                    language = "English",
+                    subtitlesUrl = "English, Bangla"
+                ),
+                MovieEntity(
+                    title = "Mirzapur - Season 3",
+                    description = "The battle for the throne of Mirzapur reaches boiling point as Kaleen Bhaiya and Guddu Pandit clash in a blood-soaked finale.",
+                    rating = 4.7,
+                    year = 2024,
+                    duration = "55m",
+                    genre = "Top web Series, Top Series This Week 🔝, 🔥Trending Now",
+                    posterDrawableName = "img_poster_cyberpunk",
+                    videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4",
+                    viewsCount = 88000,
+                    isFeatured = false,
+                    isTrending = true,
+                    isLatest = true,
+                    language = "Hindi",
+                    subtitlesUrl = "English"
+                ),
+                MovieEntity(
+                    title = "Chader Pahar",
+                    description = "A young Bengali adventurer leaves his village to seek his fortune in the dark, uncharted wilderness of Africa's Mountains of the Moon.",
+                    rating = 4.6,
+                    year = 2023,
+                    duration = "2h 20m",
+                    genre = "Best bangla Dramas, bangladesh TV",
                     posterDrawableName = "img_poster_fantasy",
-                    videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
-                    viewsCount = 8200,
+                    videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4",
+                    viewsCount = 18000,
                     isFeatured = false,
                     isTrending = false,
                     isLatest = true,
-                    language = "English",
-                    subtitlesUrl = "English, German"
-                ),
-                MovieEntity(
-                    title = "Tears of Steel",
-                    description = "A futuristic drama in which a group of soldiers and scientists must salvage a giant space mech to protect Earth from rogue robotic AI.",
-                    rating = 4.5,
-                    year = 2022,
-                    duration = "1h 22m",
-                    genre = "Sci-Fi, Drama",
-                    posterDrawableName = "img_hero_dune",
-                    videoUrl = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4",
-                    viewsCount = 15300,
-                    isFeatured = true,
-                    isTrending = false,
-                    language = "English",
-                    subtitlesUrl = "English, French"
+                    language = "Bengali",
+                    subtitlesUrl = "English"
                 )
             )
 
@@ -293,14 +336,27 @@ class MovieRepository(private val movieDao: MovieDao) {
                     val videoUrl = videoUrls[index % videoUrls.size]
                     val viewsCount = 4500 + (index * 173) % 25000
 
+                    val mappedGenre = when (genreName) {
+                        "Action" -> if (index % 2 == 0) "Hollywood" else "🔥Cinema"
+                        "Sci-Fi" -> if (index % 2 == 0) "Top web Series" else "bangladesh TV"
+                        "Fantasy" -> if (index % 2 == 0) "South Indian" else "Bollywood"
+                        else -> {
+                            if (index % 3 == 0) "bangla natok"
+                            else if (index % 3 == 1) "Best bangla Dramas"
+                            else "Short TV"
+                        }
+                    }
+
+                    val upcomingValue = (index % 11 == 0)
+
                     extraMovies.add(
                         MovieEntity(
                             title = title,
                             description = desc,
                             rating = rating,
-                            year = year,
+                            year = if (upcomingValue) 2025 else year,
                             duration = duration,
-                            genre = genreName,
+                            genre = mappedGenre,
                             posterDrawableName = when (genreName) {
                                 "Action" -> "img_poster_cyberpunk"
                                 "Sci-Fi" -> "img_poster_cyberpunk"
@@ -312,7 +368,8 @@ class MovieRepository(private val movieDao: MovieDao) {
                             isFeatured = (index % 9 == 0),
                             isTrending = (index % 7 == 0),
                             isLatest = (index % 5 == 0),
-                            language = "English",
+                            isUpcoming = upcomingValue,
+                            language = if (mappedGenre.contains("bangla")) "Bengali" else "English",
                             subtitlesUrl = "English (SRT)"
                         )
                     )

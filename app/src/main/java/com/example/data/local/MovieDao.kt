@@ -19,6 +19,9 @@ interface MovieDao {
     @Query("SELECT * FROM movies WHERE isLatest = 1 ORDER BY id DESC")
     fun getLatestMovies(): Flow<List<MovieEntity>>
 
+    @Query("SELECT * FROM movies WHERE isUpcoming = 1 ORDER BY id DESC")
+    fun getUpcomingMovies(): Flow<List<MovieEntity>>
+
     @Query("SELECT * FROM movies WHERE id = :movieId LIMIT 1")
     suspend fun getMovieById(movieId: Int): MovieEntity?
 
