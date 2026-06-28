@@ -3,8 +3,8 @@
 <p align="center">
   
 </p>
-
-![1782624762312.png](https://github.com/user-attachments/assets/326b6f9c-9051-4ba0-aaea-91d2bd25a6c6)
+![file_0000000006947207812287631d2d1b69.png](https://github.com/user-attachments/assets/cc5cc1b6-6d48-422e-b00c-9a5550c06a9f)
+)
 
 MatMovies – Unlimited Entertainment in One App 🎬
 Welcome to MatMovies, your ultimate destination for non-stop entertainment. Watch the latest movies, trending dramas, popular web series, and classic favorites—all in one easy-to-use app.
