@@ -14,9 +14,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import com.example.ui.navigation.Screen
 import com.example.ui.screens.*
 import com.example.ui.theme.MoviesBoxTheme
+import com.example.ui.utils.NetworkMonitor
 import com.example.ui.viewmodel.AuthViewModel
 import com.example.ui.viewmodel.MovieViewModel
 import com.example.ui.viewmodel.ViewModelFactory
@@ -37,10 +41,26 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = androidx.compose.material3.MaterialTheme.colorScheme.background
                 ) {
-                    MoviesAppNavigation(
-                        authViewModel = authViewModel,
-                        movieViewModel = movieViewModel
-                    )
+                    val networkMonitor = remember { NetworkMonitor(applicationContext) }
+                    val isOnline by networkMonitor.isOnline.collectAsState(initial = true)
+
+                    if (isOnline) {
+                        MoviesAppNavigation(
+                            authViewModel = authViewModel,
+                            movieViewModel = movieViewModel
+                        )
+                    } else {
+                        val context = androidx.compose.ui.platform.LocalContext.current
+                        OfflineScreen(
+                            onRetry = {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    "Checking connection...",
+                                    android.widget.Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        )
+                    }
                 }
             }
         }
