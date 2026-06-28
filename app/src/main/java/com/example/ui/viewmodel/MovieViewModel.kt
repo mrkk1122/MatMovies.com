@@ -169,6 +169,11 @@ class MovieViewModel(private val movieRepository: MovieRepository) : ViewModel()
         }
     }
 
+    suspend fun getWatchHistoryItem(movieId: Int): WatchHistoryEntity? {
+        val userId = _activeUserId.value ?: return null
+        return movieRepository.getWatchHistoryItem(userId, movieId)
+    }
+
     fun clearWatchHistory() {
         val userId = _activeUserId.value ?: return
         viewModelScope.launch {
@@ -235,6 +240,30 @@ class MovieViewModel(private val movieRepository: MovieRepository) : ViewModel()
     fun removeDownloadedMovie(movieId: Int) {
         _downloadedMovieIds.value = _downloadedMovieIds.value.toMutableSet().apply {
             remove(movieId)
+        }
+    }
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing = _isRefreshing.asStateFlow()
+
+    private val _syncSpeedKb = MutableStateFlow(0)
+    val syncSpeedKb = _syncSpeedKb.asStateFlow()
+
+    fun refreshData(onComplete: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            val speedSteps = listOf(256, 512, 768, 1024, 480, 640)
+            
+            for (speed in speedSteps) {
+                _syncSpeedKb.value = speed + (1..50).random()
+                kotlinx.coroutines.delay(250)
+            }
+
+            val success = movieRepository.syncWithBackend()
+            
+            _syncSpeedKb.value = 0
+            _isRefreshing.value = false
+            onComplete(success)
         }
     }
 }

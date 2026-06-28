@@ -256,7 +256,7 @@ fun ProfileScreen(
                     subtitle = "Upgrade to premium or VIP plans",
                     onClick = {
                         if (currentUser != null) {
-                            showSubscriptionDialog = true
+                            navController.navigate(Screen.Subscription.route)
                         } else {
                             navController.navigate(Screen.Login.route)
                         }
@@ -267,14 +267,18 @@ fun ProfileScreen(
                     icon = Icons.Default.Settings,
                     title = "App Settings",
                     subtitle = "Stream quality, autoplay preferences",
-                    onClick = { showAppSettingsDialog = true }
+                    onClick = {
+                        navController.navigate(Screen.AppSettings.route)
+                    }
                 )
 
                 ProfileMenuItem(
                     icon = Icons.Default.Help,
                     title = "Help & Support",
                     subtitle = "Terms, FAQs, Contact MatMovies Team",
-                    onClick = { showHelpSupportDialog = true }
+                    onClick = {
+                        navController.navigate(Screen.HelpSupport.route)
+                    }
                 )
 
                 if (currentUser != null) {

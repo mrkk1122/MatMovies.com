@@ -15,6 +15,21 @@ class MovieRepository(private val movieDao: MovieDao) {
     val upcomingMovies: Flow<List<MovieEntity>> = movieDao.getUpcomingMovies()
     val categories: Flow<List<CategoryEntity>> = movieDao.getAllCategories()
 
+    suspend fun syncWithBackend(): Boolean = withContext(Dispatchers.IO) {
+        try {
+            val apiService = com.example.data.remote.RetrofitClient.apiService
+            val remoteMovies = apiService.getMovies()
+            if (remoteMovies.isNotEmpty()) {
+                movieDao.deleteAllMovies()
+                movieDao.insertMovies(remoteMovies)
+                return@withContext true
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return@withContext false
+    }
+
     fun searchMovies(query: String): Flow<List<MovieEntity>> = movieDao.searchMovies(query)
     fun getMoviesByGenre(genre: String): Flow<List<MovieEntity>> = movieDao.getMoviesByGenre(genre)
 

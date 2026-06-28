@@ -127,47 +127,69 @@ fun SplashScreen(
                 .alpha(alpha.value)
                 .padding(24.dp)
         ) {
-            // Elegant glowing card for Logo placed strictly ABOVE App Name
+            // Elegant glowing card for original movie Logo placed strictly ABOVE App Name
+            val logoDrawableId = DrawableHelper.getDrawableIdByName("img_app_icon_cinema")
             Box(
                 modifier = Modifier
-                    .size(110.dp)
+                    .size(125.dp)
                     .background(
                         Brush.radialGradient(
                             colors = listOf(
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                Color(0xFFFFB300).copy(alpha = 0.4f),
                                 Color.Transparent
                             )
                         )
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.PlayCircleFilled,
+                Image(
+                    painter = painterResource(id = logoDrawableId),
                     contentDescription = "MatMovies Logo",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(90.dp)
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .border(2.dp, Color(0xFFFFB300), RoundedCornerShape(24.dp)),
+                    contentScale = ContentScale.Crop
                 )
             }
             
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Text(
+                text = "Welcome to",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White.copy(alpha = 0.9f),
+                letterSpacing = 1.sp
+            )
+            
+            Spacer(modifier = Modifier.height(6.dp))
             
             Text(
                 text = "MatMovies",
-                fontSize = 44.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color.White,
+                fontSize = 48.sp,
+                fontWeight = FontWeight.Black,
+                style = androidx.compose.ui.text.TextStyle(
+                    brush = Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFFFFB300),
+                            Color(0xFFFF5722),
+                            Color(0xFFE91E63)
+                        )
+                    )
+                ),
                 letterSpacing = 2.sp
             )
             
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             
             Text(
                 text = "STREAM • EXPERIENCE • REPEAT",
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.9f),
-                letterSpacing = 5.sp,
-                modifier = Modifier.padding(top = 8.dp)
+                color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.8f),
+                letterSpacing = 4.sp,
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
     }

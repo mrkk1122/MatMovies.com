@@ -1,11 +1,17 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import com.example.ui.utils.DrawableHelper
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -36,6 +42,8 @@ fun LoginScreen(
     var email by remember { mutableStateFlowOf("") }
     var password by remember { mutableStateFlowOf("") }
     var isPasswordVisible by remember { mutableStateFlowOf(false) }
+    var showGoogleAuth by remember { mutableStateOf(false) }
+    var showFacebookAuth by remember { mutableStateOf(false) }
 
     val errorMsg by authViewModel.loginError.collectAsState()
     val currentUser by authViewModel.currentUser.collectAsState()
@@ -73,36 +81,54 @@ fun LoginScreen(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Shiny App Logo and Name
-                Box(
+                // Original movie icon on top of the text
+                val logoDrawableId = DrawableHelper.getDrawableIdByName("img_app_icon_cinema")
+                Image(
+                    painter = painterResource(id = logoDrawableId),
+                    contentDescription = "MatMovies Logo",
                     modifier = Modifier
-                        .size(64.dp)
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(
-                                    Color(0xFFFFB300),
-                                    Color(0xFFE50914)
-                                )
-                            ),
-                            shape = RoundedCornerShape(16.dp)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = "Logo Icon",
-                        tint = Color.Black,
-                        modifier = Modifier.size(36.dp)
-                    )
-                }
+                        .size(80.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color.Black)
+                        .border(1.5.dp, Color(0xFFFFB300), RoundedCornerShape(18.dp)),
+                    contentScale = ContentScale.Crop
+                )
                 Spacer(modifier = Modifier.height(14.dp))
-                AnimatedAppName(fontSize = 32.sp)
+                
+                // Welcome to MatMovies in bold, colorful, and larger format
+                Text(
+                    text = "Welcome to",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = 0.85f),
+                    letterSpacing = 1.sp
+                )
+                
                 Spacer(modifier = Modifier.height(4.dp))
+                
+                Text(
+                    text = "MatMovies",
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Black,
+                    style = androidx.compose.ui.text.TextStyle(
+                        brush = Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFFFFB300),
+                                Color(0xFFFF5722),
+                                Color(0xFFE91E63)
+                            )
+                        )
+                    ),
+                    letterSpacing = 1.5.sp
+                )
+                
+                Spacer(modifier = Modifier.height(6.dp))
+                
                 Text(
                     text = "Sign in to continue streaming",
-                    fontSize = 14.sp,
-                    color = Color.White.copy(alpha = 0.7f),
-                    modifier = Modifier.padding(bottom = 24.dp)
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(bottom = 20.dp)
                 )
 
                 if (errorMsg != null) {
@@ -241,14 +267,7 @@ fun LoginScreen(
                     // Google Button
                     Button(
                         onClick = {
-                            // Simulator auto log-in with Google test user
-                            email = "user@moviesbox.com"
-                            password = "password"
-                            authViewModel.login(email, password) {
-                                navController.navigate(Screen.Home.route) {
-                                    popUpTo(Screen.Login.route) { inclusive = true }
-                                }
-                            }
+                            showGoogleAuth = true
                         },
                         modifier = Modifier
                             .weight(1f)
@@ -279,14 +298,7 @@ fun LoginScreen(
                     // Facebook Button
                     Button(
                         onClick = {
-                            // Simulator auto log-in with Facebook test user
-                            email = "user@moviesbox.com"
-                            password = "password"
-                            authViewModel.login(email, password) {
-                                navController.navigate(Screen.Home.route) {
-                                    popUpTo(Screen.Login.route) { inclusive = true }
-                                }
-                            }
+                            showFacebookAuth = true
                         },
                         modifier = Modifier
                             .weight(1f)
@@ -337,6 +349,334 @@ fun LoginScreen(
                             .clickable { navController.navigate(Screen.Register.route) }
                             .testTag("register_navigation_link")
                     )
+                }
+            }
+        }
+
+        // Render Dialog Overlays
+        if (showGoogleAuth) {
+            GoogleAuthDialog(
+                onDismiss = { showGoogleAuth = false },
+                onSuccess = { sEmail, sName ->
+                    authViewModel.loginSocialUser(sEmail, sName) {
+                        showGoogleAuth = false
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    }
+                }
+            )
+        }
+
+        if (showFacebookAuth) {
+            FacebookAuthDialog(
+                onDismiss = { showFacebookAuth = false },
+                onSuccess = { fbEmail, fbName ->
+                    authViewModel.loginSocialUser(fbEmail, fbName) {
+                        showFacebookAuth = false
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Login.route) { inclusive = true }
+                        }
+                    }
+                }
+            )
+        }
+    }
+}
+
+@Composable
+fun GoogleAuthDialog(
+    onDismiss: () -> Unit,
+    onSuccess: (String, String) -> Unit
+) {
+    var isLoading by remember { mutableStateOf(false) }
+    var showCustomInput by remember { mutableStateOf(false) }
+    var customEmail by remember { mutableStateOf("") }
+    var customName by remember { mutableStateOf("") }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Google logo banner
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    Text("G", color = Color(0xFF4285F4), fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                    Text("o", color = Color(0xFFEA4335), fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                    Text("o", color = Color(0xFFFBBC05), fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                    Text("g", color = Color(0xFF4285F4), fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                    Text("l", color = Color(0xFF34A853), fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                    Text("e", color = Color(0xFFEA4335), fontWeight = FontWeight.Bold, fontSize = 24.sp)
+                }
+
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color(0xFF4285F4))
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Signing in with Google...", color = Color.Gray, fontSize = 14.sp)
+                } else if (!showCustomInput) {
+                    Text(
+                        text = "Choose an account",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = "to continue to MatMovies",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    // Profile Account 1
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                isLoading = true
+                                onSuccess("khokonkhokon7990@gmail.com", "Khokon")
+                            }
+                            .padding(vertical = 4.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F3F4))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(Color(0xFF4285F4), androidx.compose.foundation.shape.CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("K", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("Khokon", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text("khokonkhokon7990@gmail.com", color = Color.Gray, fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    // Profile Account 2
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                isLoading = true
+                                onSuccess("guest.movies@gmail.com", "Guest User")
+                            }
+                            .padding(vertical = 4.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F3F4))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .background(Color(0xFF34A853), androidx.compose.foundation.shape.CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("G", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text("Guest User", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text("guest.movies@gmail.com", color = Color.Gray, fontSize = 12.sp)
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    TextButton(onClick = { showCustomInput = true }) {
+                        Text("Use another account", color = Color(0xFF4285F4), fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    Text(
+                        text = "Sign in with Google",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = customName,
+                        onValueChange = { customName = it },
+                        label = { Text("Your Name") },
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            focusedBorderColor = Color(0xFF4285F4),
+                            focusedLabelColor = Color(0xFF4285F4)
+                        )
+                    )
+
+                    OutlinedTextField(
+                        value = customEmail,
+                        onValueChange = { customEmail = it },
+                        label = { Text("Google Email") },
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.Black,
+                            unfocusedTextColor = Color.Black,
+                            focusedBorderColor = Color(0xFF4285F4),
+                            focusedLabelColor = Color(0xFF4285F4)
+                        )
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { showCustomInput = false }) {
+                            Text("Back", color = Color.Gray)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                if (customEmail.isNotBlank() && customName.isNotBlank()) {
+                                    isLoading = true
+                                    onSuccess(customEmail.trim(), customName.trim())
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4285F4))
+                        ) {
+                            Text("Continue")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun FacebookAuthDialog(
+    onDismiss: () -> Unit,
+    onSuccess: (String, String) -> Unit
+) {
+    var isLoading by remember { mutableStateOf(false) }
+    var fbEmail by remember { mutableStateOf("") }
+    var fbName by remember { mutableStateOf("") }
+
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F2F5)),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Facebook Header
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFF1877F2))
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "facebook",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 24.sp
+                    )
+                }
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color(0xFF1877F2))
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Connecting to Facebook secure login...", color = Color.Gray, fontSize = 13.sp)
+                    } else {
+                        Text(
+                            text = "Log in with your Facebook account",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF333333),
+                            modifier = Modifier.padding(bottom = 16.dp),
+                            textAlign = TextAlign.Center
+                        )
+
+                        OutlinedTextField(
+                            value = fbName,
+                            onValueChange = { fbName = it },
+                            label = { Text("Full Name") },
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.Black,
+                                unfocusedTextColor = Color.Black,
+                                focusedBorderColor = Color(0xFF1877F2),
+                                focusedLabelColor = Color(0xFF1877F2),
+                                unfocusedLabelColor = Color.Gray
+                            )
+                        )
+
+                        OutlinedTextField(
+                            value = fbEmail,
+                            onValueChange = { fbEmail = it },
+                            label = { Text("Mobile number or email address") },
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = Color.Black,
+                                unfocusedTextColor = Color.Black,
+                                focusedBorderColor = Color(0xFF1877F2),
+                                focusedLabelColor = Color(0xFF1877F2),
+                                unfocusedLabelColor = Color.Gray
+                            )
+                        )
+
+                        Button(
+                            onClick = {
+                                if (fbEmail.isNotBlank() && fbName.isNotBlank()) {
+                                    isLoading = true
+                                    onSuccess(fbEmail.trim(), fbName.trim())
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(44.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1877F2)),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text("Log In", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        TextButton(onClick = onDismiss) {
+                            Text("Cancel", color = Color.Gray)
+                        }
+                    }
                 }
             }
         }

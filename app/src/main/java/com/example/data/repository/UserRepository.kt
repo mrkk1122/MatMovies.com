@@ -94,5 +94,9 @@ class UserRepository(
         return userDao.getUserById(userId)
     }
 
+    suspend fun getUserByEmail(email: String): UserEntity? {
+        return userDao.getUserByEmail(email)
+    }
+
     fun getAllUsers(): Flow<List<UserEntity>> = userDao.getAllUsers()
 }

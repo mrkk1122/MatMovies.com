@@ -45,6 +45,10 @@ import androidx.compose.foundation.shape.CircleShape
 import com.example.ui.components.AnimatedAppName
 import kotlinx.coroutines.delay
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -79,9 +83,44 @@ fun HomeScreen(
     var selectedGenreFilter by remember { mutableStateOf("All") }
     var homeSearchQuery by remember { mutableStateOf("") }
     var isSearchExpanded by remember { mutableStateOf(false) }
-    val focusRequester = remember { FocusRequester() }
 
     val homeScrollState = rememberScrollState()
+    var dragOffset by remember { mutableStateOf(0f) }
+    val isRefreshing by movieViewModel.isRefreshing.collectAsStateWithLifecycle()
+    val syncSpeedKb by movieViewModel.syncSpeedKb.collectAsStateWithLifecycle()
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
+                if (homeScrollState.value == 0 && available.y > 0) {
+                    dragOffset = (dragOffset + available.y * 0.4f).coerceAtMost(250f)
+                    return Offset(0f, available.y)
+                }
+                if (dragOffset > 0f && available.y < 0) {
+                    val consumed = if (dragOffset + available.y >= 0f) available.y else -dragOffset
+                    dragOffset = (dragOffset + consumed).coerceAtLeast(0f)
+                    return Offset(0f, consumed)
+                }
+                return super.onPreScroll(available, source)
+            }
+
+            override suspend fun onPostFling(
+                consumed: Velocity,
+                available: Velocity
+            ): Velocity {
+                if (dragOffset > 100f && !isRefreshing) {
+                    movieViewModel.refreshData()
+                }
+                dragOffset = 0f
+                return super.onPostFling(consumed, available)
+            }
+        }
+    }
+    val focusRequester = remember { FocusRequester() }
+
     var visibleMoviesLimit by remember { mutableStateOf(4) }
     var isLoadingMore by remember { mutableStateOf(false) }
 
@@ -117,21 +156,26 @@ fun HomeScreen(
         navController = navController,
         currentRoute = Screen.Home.route
     ) { innerPadding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF0F0F13),
-                            Color(0xFF14141F),
-                            Color(0xFF0A0A0E)
+                .padding(innerPadding)
+                .nestedScroll(nestedScrollConnection)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color(0xFF0F0F13),
+                                Color(0xFF14141F),
+                                Color(0xFF0A0A0E)
+                            )
                         )
                     )
-                )
-                .padding(innerPadding)
-                .verticalScroll(homeScrollState)
-        ) {
+                    .verticalScroll(homeScrollState)
+            ) {
             // Conditional Smart Header & Search Architecture
             if (isSearchExpanded) {
                 // Expanded Elegant Search Bar (Active state)
@@ -1194,7 +1238,43 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
         }
+
+        // Elegant floating Refresh / Speed overlay (চিকন, সুন্দর স্পিড মিটার)
+        if (isRefreshing || dragOffset > 15f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E24).copy(alpha = 0.9f)),
+                    shape = RoundedCornerShape(30.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFB300).copy(alpha = 0.3f)),
+                    modifier = Modifier
+                        .padding(top = (16.dp + (dragOffset / 4).dp).coerceAtMost(80.dp))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = Color(0xFFFFB300),
+                            strokeWidth = 2.dp
+                        )
+                        Text(
+                            text = if (isRefreshing) "Syncing: $syncSpeedKb KB/s" else "Pull to Refresh",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
     }
+}
 }
 
 @Composable

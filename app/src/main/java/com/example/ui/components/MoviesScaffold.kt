@@ -87,7 +87,12 @@ fun MoviesScaffold(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     modifier = Modifier
                                         .clickable {
-                                            if (currentRoute != item.route) {
+                                            if (item.route == Screen.Home.route) {
+                                                navController.navigate(item.route) {
+                                                    popUpTo(Screen.Home.route) { inclusive = true }
+                                                    launchSingleTop = true
+                                                }
+                                            } else if (currentRoute != item.route) {
                                                 navController.navigate(item.route) {
                                                     popUpTo(Screen.Home.route) { saveState = true }
                                                     launchSingleTop = true
@@ -106,7 +111,7 @@ fun MoviesScaffold(
                                             else -> Color(0xFFFF4081)        // Pink/Magenta
                                         }
                                     } else {
-                                        Color.White.copy(alpha = 0.45f)
+                                        Color.White.copy(alpha = 0.65f)
                                     }
 
                                     Icon(
@@ -122,6 +127,16 @@ fun MoviesScaffold(
                                         fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                                         color = iconTint
                                     )
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    if (selected) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(4.dp)
+                                                .background(iconTint, androidx.compose.foundation.shape.CircleShape)
+                                        )
+                                    } else {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                    }
                                 }
                             }
                         }

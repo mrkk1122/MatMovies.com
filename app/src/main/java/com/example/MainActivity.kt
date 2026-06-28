@@ -169,5 +169,20 @@ fun MoviesAppNavigation(
         composable(Screen.AdminDashboard.route) {
             AdminDashboardScreen(navController = navController, movieViewModel = movieViewModel)
         }
+
+        // Subscription Portal Screen
+        composable(Screen.Subscription.route) {
+            SubscriptionScreen(navController = navController, authViewModel = authViewModel)
+        }
+
+        // App Settings Screen
+        composable(Screen.AppSettings.route) {
+            AppSettingsScreen(navController = navController)
+        }
+
+        // Help & Support Screen
+        composable(Screen.HelpSupport.route) {
+            HelpSupportScreen(navController = navController)
+        }
     }
 }

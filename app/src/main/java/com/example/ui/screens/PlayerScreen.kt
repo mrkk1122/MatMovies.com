@@ -9,9 +9,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -32,6 +35,7 @@ import com.example.ui.viewmodel.MovieViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerScreen(
     movieId: Int,
@@ -41,14 +45,6 @@ fun PlayerScreen(
 ) {
     val context = LocalContext.current
     val activity = context as? ComponentActivity
-
-    // Lock orientation to Landscape for maximum cinematic streaming experience!
-    DisposableEffect(Unit) {
-        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-        onDispose {
-            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
-    }
 
     val currentUser by authViewModel.currentUser.collectAsState()
     val movie by movieViewModel.selectedMovie.collectAsState()
@@ -67,6 +63,33 @@ fun PlayerScreen(
 
     var showSubtitleDialog by remember { mutableStateOf(false) }
     var showQualityDialog by remember { mutableStateOf(false) }
+
+    var savedProgressMs by remember { mutableStateOf(-1L) }
+
+    LaunchedEffect(movieId, currentUser) {
+        val historyItem = movieViewModel.getWatchHistoryItem(movieId)
+        if (historyItem != null) {
+            savedProgressMs = historyItem.progressMs
+            currentProgressMs = historyItem.progressMs
+        } else {
+            savedProgressMs = 0L
+        }
+    }
+
+    val latestProgress = rememberUpdatedState(currentProgressMs)
+    val latestDuration = rememberUpdatedState(totalDurationMs)
+
+    // Lock orientation to Landscape for maximum cinematic streaming experience!
+    DisposableEffect(Unit) {
+        activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        onDispose {
+            activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            // Save final watch progress!
+            if (latestProgress.value > 0 && latestDuration.value > 0) {
+                movieViewModel.saveWatchProgress(movieId, latestProgress.value, latestDuration.value)
+            }
+        }
+    }
 
     LaunchedEffect(movieId) {
         movieViewModel.setActiveUser(currentUser?.id)
@@ -135,9 +158,11 @@ fun PlayerScreen(
                         mediaPlayerInstance = mp
                         totalDurationMs = duration.toLong()
                         
-                        // Resume watching capability! Check if there is past watch progress in database
-                        val savedHistory = movieViewModel.watchHistory.value.firstOrNull { it.id == movieId }
-                        // Note: If we don't have it immediately, we can check database history item. Let's do a safe simulation or query check
+                        // Seek to the previously saved progress if any
+                        if (savedProgressMs > 0) {
+                            seekTo(savedProgressMs.toInt())
+                        }
+                        
                         mp.start()
                         isPlaying = true
                         
@@ -190,14 +215,19 @@ fun PlayerScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.6f))
+                    .background(Color.Black.copy(alpha = 0.5f))
             ) {
                 // Top Toolbar (Back, Movie Title, Subtitle, Quality)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.TopCenter)
-                        .padding(16.dp),
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Black.copy(alpha = 0.8f), Color.Transparent)
+                            )
+                        )
+                        .padding(horizontal = 24.dp, vertical = 20.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -206,34 +236,48 @@ fun PlayerScreen(
                             onClick = {
                                 videoViewInstance?.stopPlayback()
                                 navController.popBackStack()
-                            }
+                            },
+                            modifier = Modifier
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
                         ) {
                             Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(14.dp))
                         Column {
                             Text(
                                 text = currentMovie.title,
                                 color = Color.White,
-                                fontSize = 16.sp,
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Streaming in ${selectedQuality}",
-                                color = MaterialTheme.colorScheme.primary,
-                                fontSize = 11.sp
+                                text = "Streaming • ${selectedQuality} Premium UHD",
+                                color = Color(0xFFFFB300),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
 
-                    Row {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         // Subtitle trigger
-                        IconButton(onClick = { showSubtitleDialog = true }) {
+                        IconButton(
+                            onClick = { showSubtitleDialog = true },
+                            modifier = Modifier
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
+                        ) {
                             Icon(Icons.Default.Subtitles, contentDescription = "Subtitles", tint = Color.White)
                         }
 
                         // Quality trigger
-                        IconButton(onClick = { showQualityDialog = true }) {
+                        IconButton(
+                            onClick = { showQualityDialog = true },
+                            modifier = Modifier
+                                .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
+                        ) {
                             Icon(Icons.Default.Settings, contentDescription = "Quality", tint = Color.White)
                         }
                     }
@@ -253,11 +297,15 @@ fun PlayerScreen(
                                 currentProgressMs = target.toLong()
                             }
                         },
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier
+                            .size(50.dp)
+                            .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                            .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
                     ) {
-                        Icon(Icons.Default.Replay10, contentDescription = "Rewind 10s", tint = Color.White, modifier = Modifier.size(36.dp))
+                        Icon(Icons.Default.Replay10, contentDescription = "Rewind 10s", tint = Color.White, modifier = Modifier.size(32.dp))
                     }
 
+                    // Gorgeous Gold/Yellow Floating Action Button for Play/Pause
                     FloatingActionButton(
                         onClick = {
                             videoViewInstance?.let { vv ->
@@ -274,15 +322,18 @@ fun PlayerScreen(
                                 }
                             }
                         },
-                        containerColor = MaterialTheme.colorScheme.primary,
+                        containerColor = Color(0xFFFFB300),
                         contentColor = Color.Black,
-                        shape = RoundedCornerShape(28.dp),
-                        modifier = Modifier.size(56.dp)
+                        shape = CircleShape,
+                        modifier = Modifier
+                            .size(68.dp)
+                            .border(2.dp, Color.White.copy(alpha = 0.4f), CircleShape)
                     ) {
                         Icon(
                             imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
                             contentDescription = "Play/Pause",
-                            modifier = Modifier.size(32.dp)
+                            tint = Color.Black,
+                            modifier = Modifier.size(36.dp)
                         )
                     }
 
@@ -294,9 +345,12 @@ fun PlayerScreen(
                                 currentProgressMs = target.toLong()
                             }
                         },
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier
+                            .size(50.dp)
+                            .background(Color.Black.copy(alpha = 0.4f), CircleShape)
+                            .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape)
                     ) {
-                        Icon(Icons.Default.Forward10, contentDescription = "Forward 10s", tint = Color.White, modifier = Modifier.size(36.dp))
+                        Icon(Icons.Default.Forward10, contentDescription = "Forward 10s", tint = Color.White, modifier = Modifier.size(32.dp))
                     }
                 }
 
@@ -305,7 +359,12 @@ fun PlayerScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter)
-                        .padding(16.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))
+                            )
+                        )
+                        .padding(horizontal = 24.dp, vertical = 20.dp)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -315,10 +374,11 @@ fun PlayerScreen(
                         Text(
                             text = formatTime(currentProgressMs),
                             color = Color.White,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
                         )
 
-                        // Slider progress control
+                        // Slider progress control with super thin custom line (2.dp) and yellow color
                         Slider(
                             value = if (totalDurationMs > 0) currentProgressMs.toFloat() / totalDurationMs else 0f,
                             onValueChange = { percent ->
@@ -329,10 +389,33 @@ fun PlayerScreen(
                                 }
                             },
                             colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary,
-                                inactiveTrackColor = Color.Gray
+                                thumbColor = Color(0xFFFFB300),
+                                activeTrackColor = Color(0xFFFFB300),
+                                inactiveTrackColor = Color.White.copy(alpha = 0.24f)
                             ),
+                            thumb = {
+                                Box(
+                                    modifier = Modifier
+                                        .size(10.dp)
+                                        .background(Color(0xFFFFB300), CircleShape)
+                                )
+                            },
+                            track = { sliderPositions ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(2.dp) // Extremely thin watch line!
+                                        .background(Color.White.copy(alpha = 0.24f), RoundedCornerShape(1.dp))
+                                ) {
+                                    val fraction = if (totalDurationMs > 0) currentProgressMs.toFloat() / totalDurationMs else 0f
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth(fraction)
+                                            .fillMaxHeight()
+                                            .background(Color(0xFFFFB300), RoundedCornerShape(1.dp))
+                                    )
+                                }
+                            },
                             modifier = Modifier
                                 .weight(1f)
                                 .padding(horizontal = 16.dp)
@@ -342,7 +425,8 @@ fun PlayerScreen(
                         Text(
                             text = formatTime(totalDurationMs),
                             color = Color.White,
-                            fontSize = 12.sp
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
 
@@ -350,14 +434,16 @@ fun PlayerScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 8.dp),
+                            .padding(top = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Playback Speed Toggle
+                        // Playback Speed Toggle styled as a beautiful modern chip
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
+                                .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp))
+                                .border(1.dp, Color(0xFFFFB300).copy(alpha = 0.3f), RoundedCornerShape(20.dp))
                                 .clickable {
                                     playbackSpeed = when (playbackSpeed) {
                                         0.5f -> 1.0f
@@ -375,22 +461,27 @@ fun PlayerScreen(
                                         }
                                     }
                                 }
-                                .padding(8.dp)
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
                         ) {
-                            Icon(Icons.Default.Speed, contentDescription = "Speed", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
+                            Icon(Icons.Default.Speed, contentDescription = "Speed", tint = Color(0xFFFFB300), modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
                             Text("Speed: ${playbackSpeed}x", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
 
-                        // Picture in picture simulated note
-                        IconButton(
-                            onClick = {
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                    activity?.enterPictureInPictureMode()
-                                }
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            // Picture in picture option
+                            IconButton(
+                                onClick = {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                        activity?.enterPictureInPictureMode()
+                                    }
+                                },
+                                modifier = Modifier
+                                    .background(Color.White.copy(alpha = 0.08f), CircleShape)
+                                    .size(36.dp)
+                            ) {
+                                Icon(Icons.Default.PictureInPicture, contentDescription = "PiP Mode", tint = Color.White, modifier = Modifier.size(18.dp))
                             }
-                        ) {
-                            Icon(Icons.Default.PictureInPicture, contentDescription = "PiP Mode", tint = Color.White)
                         }
                     }
                 }

@@ -78,6 +78,44 @@ class AuthViewModel(private val userRepository: UserRepository) : ViewModel() {
         }
     }
 
+    fun loginSocialUser(email: String, username: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _loginError.value = null
+            userRepository.loginUser(email, "social_secured_pass")
+                .onSuccess { user ->
+                    _currentUser.value = user
+                    onSuccess()
+                }
+                .onFailure {
+                    userRepository.registerUser(email, "social_secured_pass", username)
+                        .onSuccess {
+                            userRepository.loginUser(email, "social_secured_pass")
+                                .onSuccess { user ->
+                                    _currentUser.value = user
+                                    onSuccess()
+                                }
+                                .onFailure { ex ->
+                                    _loginError.value = ex.message ?: "Authentication failed"
+                                }
+                        }
+                        .onFailure { ex ->
+                            // If user already exists but password doesn't match standard social pass (maybe they registered with normal password)
+                            // We can just log them in directly with that email
+                            viewModelScope.launch {
+                                val existingUser = userRepository.getUserByEmail(email)
+                                if (existingUser != null) {
+                                    _currentUser.value = existingUser
+                                    userRepository.setSession(existingUser.id, existingUser.email, existingUser.role, existingUser.subscriptionStatus)
+                                    onSuccess()
+                                } else {
+                                    _loginError.value = ex.message ?: "Authentication failed"
+                                }
+                            }
+                        }
+                }
+        }
+    }
+
     fun upgradeSubscription(tier: String) {
         val user = _currentUser.value ?: return
         viewModelScope.launch {

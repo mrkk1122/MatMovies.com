@@ -92,6 +92,8 @@ fun MovieDetailsScreen(
     }
 
     val currentMovie = movie!!
+    var selectedSeason by remember(currentMovie.id) { mutableStateOf(1) }
+    var selectedEpisode by remember(currentMovie.id, selectedSeason) { mutableStateOf(1) }
 
     MoviesScaffold(
         navController = navController,
@@ -111,7 +113,9 @@ fun MovieDetailsScreen(
                 .height(340.dp)
         ) {
             var isVideoReady by remember { mutableStateOf(false) }
-
+            var isMuted by remember { mutableStateOf(true) }
+            var trailerMediaPlayer by remember { mutableStateOf<android.media.MediaPlayer?>(null) }
+ 
             // Autoplay trailer preview player (loops automatically, muted by default)
             AndroidView(
                 factory = { ctx ->
@@ -119,7 +123,8 @@ fun MovieDetailsScreen(
                         setVideoURI(android.net.Uri.parse(currentMovie.videoUrl))
                         setOnPreparedListener { mp ->
                             mp.isLooping = true
-                            mp.setVolume(0f, 0f) // Muted loops preview
+                            trailerMediaPlayer = mp
+                            mp.setVolume(if (isMuted) 0f else 1f, if (isMuted) 0f else 1f)
                             mp.start()
                             isVideoReady = true
                         }
@@ -129,9 +134,16 @@ fun MovieDetailsScreen(
                         }
                     }
                 },
+                update = { vv ->
+                    try {
+                        trailerMediaPlayer?.setVolume(if (isMuted) 0f else 1f, if (isMuted) 0f else 1f)
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                    }
+                },
                 modifier = Modifier.fillMaxSize()
             )
-
+ 
             // Show static image until video prepares or if video fails
             if (!isVideoReady) {
                 val drawableId = DrawableHelper.getDrawableIdByName(currentMovie.posterDrawableName)
@@ -141,6 +153,26 @@ fun MovieDetailsScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
+            }
+
+            // Mute / Unmute Floating Control
+            if (isVideoReady) {
+                IconButton(
+                    onClick = { isMuted = !isMuted },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(bottom = 70.dp, end = 16.dp)
+                        .background(Color.Black.copy(alpha = 0.6f), CircleShape)
+                        .border(1.dp, Color.White.copy(alpha = 0.2f), CircleShape)
+                        .size(36.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isMuted) Icons.Default.VolumeOff else Icons.Default.VolumeUp,
+                        contentDescription = "Toggle Trailer Volume",
+                        tint = if (isMuted) Color.White else Color(0xFFFFB300),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
             
             // Premium Floating Trailer Tag
@@ -359,6 +391,208 @@ fun MovieDetailsScreen(
                 )
             }
 
+            if (currentMovie.isSeries && currentMovie.seasonsCount > 0) {
+                val currentEpisodesCount = when (currentMovie.title) {
+                    "Bachelor Point - Season 4" -> 12
+                    "Mirzapur - Season 3" -> 9
+                    else -> 8
+                }
+                
+                var showSeasonDropdown by remember { mutableStateOf(false) }
+                var showEpisodeDropdown by remember { mutableStateOf(false) }
+                
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Total counts in small, sleek, thin containers (চিকন কনটেইনার)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFB300).copy(alpha = 0.12f)),
+                            shape = RoundedCornerShape(20.dp),
+                            border = BorderStroke(1.dp, Color(0xFFFFB300).copy(alpha = 0.25f)),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp, horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Tv,
+                                    contentDescription = null,
+                                    tint = Color(0xFFFFB300),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Seasons: ${currentMovie.seasonsCount}",
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE91E63).copy(alpha = 0.12f)),
+                            shape = RoundedCornerShape(20.dp),
+                            border = BorderStroke(1.dp, Color(0xFFE91E63).copy(alpha = 0.25f)),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp, horizontal = 12.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.List,
+                                    contentDescription = null,
+                                    tint = Color(0xFFE91E63),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Total Episodes: ${currentMovie.seasonsCount * currentEpisodesCount}",
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    // Selectors side-by-side in sleek, small containers
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Season Selector Container (ছোট চিকন কনটেইনার)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White.copy(alpha = 0.05f))
+                                .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                                .clickable { showSeasonDropdown = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(horizontal = 10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Tv,
+                                    contentDescription = "Season Select",
+                                    tint = Color(0xFFFFB300),
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Season $selectedSeason",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    tint = Color.White.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showSeasonDropdown,
+                                onDismissRequest = { showSeasonDropdown = false },
+                                modifier = Modifier.background(Color(0xFF1E1E24))
+                            ) {
+                                for (s in 1..currentMovie.seasonsCount) {
+                                    DropdownMenuItem(
+                                        text = { Text("Season $s", color = if (selectedSeason == s) Color(0xFFFFB300) else Color.White, fontSize = 13.sp) },
+                                        onClick = {
+                                            selectedSeason = s
+                                            selectedEpisode = 1
+                                            showSeasonDropdown = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        // Episode Selector Container (ছোট চিকন কনটেইনার)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color.White.copy(alpha = 0.05f))
+                                .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
+                                .clickable { showEpisodeDropdown = true },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center,
+                                modifier = Modifier.padding(horizontal = 10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayCircle,
+                                    contentDescription = "Episode Select",
+                                    tint = Color(0xFFFFB300),
+                                    modifier = Modifier.size(15.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "Episode $selectedEpisode",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = null,
+                                    tint = Color.White.copy(alpha = 0.6f),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showEpisodeDropdown,
+                                onDismissRequest = { showEpisodeDropdown = false },
+                                modifier = Modifier.background(Color(0xFF1E1E24))
+                            ) {
+                                for (ep in 1..currentEpisodesCount) {
+                                    DropdownMenuItem(
+                                        text = { Text("Episode $ep", color = if (selectedEpisode == ep) Color(0xFFFFB300) else Color.White, fontSize = 13.sp) },
+                                        onClick = {
+                                            selectedEpisode = ep
+                                            showEpisodeDropdown = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+
             // Synopsis
             Text(
                 text = "Synopsis",
@@ -471,6 +705,162 @@ fun MovieDetailsScreen(
                 }
             }
 
+            // Sleek thin selector for Season and Episode under Cast & Starring
+            if (currentMovie.isSeries && currentMovie.seasonsCount > 0) {
+                var isSeasonMenuExpanded by remember { mutableStateOf(false) }
+                var isEpisodeMenuExpanded by remember { mutableStateOf(false) }
+                val episodesCountForSelector = when (currentMovie.title) {
+                    "Bachelor Point - Season 4" -> 12
+                    "Mirzapur - Season 3" -> 9
+                    else -> 8
+                }
+                
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFF141419)),
+                    border = BorderStroke(1.dp, Color(0xFFFFB300).copy(alpha = 0.25f)),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PlayCircleFilled,
+                                contentDescription = "Active Stream",
+                                tint = Color(0xFFFFB300),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Running:",
+                                fontSize = 11.sp,
+                                color = Color.White.copy(alpha = 0.6f),
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Season $selectedSeason • Episode $selectedEpisode",
+                                fontSize = 11.sp,
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // Season Quick Dropdown
+                            Box {
+                                Row(
+                                    modifier = Modifier
+                                        .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(6.dp))
+                                        .clickable { isSeasonMenuExpanded = true }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "S$selectedSeason",
+                                        color = Color(0xFFFFB300),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Select Season",
+                                        tint = Color(0xFFFFB300),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                                
+                                DropdownMenu(
+                                    expanded = isSeasonMenuExpanded,
+                                    onDismissRequest = { isSeasonMenuExpanded = false },
+                                    modifier = Modifier.background(Color(0xFF1E1E24))
+                                ) {
+                                    List(currentMovie.seasonsCount) { index ->
+                                        val seasonNum = index + 1
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    "Season $seasonNum",
+                                                    color = if (selectedSeason == seasonNum) Color(0xFFFFB300) else Color.White,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            },
+                                            onClick = {
+                                                selectedSeason = seasonNum
+                                                selectedEpisode = 1
+                                                isSeasonMenuExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                            
+                            // Episode Quick Dropdown
+                            Box {
+                                Row(
+                                    modifier = Modifier
+                                        .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(6.dp))
+                                        .clickable { isEpisodeMenuExpanded = true }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "E$selectedEpisode",
+                                        color = Color(0xFFFFB300),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Select Episode",
+                                        tint = Color(0xFFFFB300),
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                }
+                                
+                                DropdownMenu(
+                                    expanded = isEpisodeMenuExpanded,
+                                    onDismissRequest = { isEpisodeMenuExpanded = false },
+                                    modifier = Modifier.background(Color(0xFF1E1E24))
+                                ) {
+                                    List(episodesCountForSelector) { index ->
+                                        val episodeNum = index + 1
+                                        DropdownMenuItem(
+                                            text = {
+                                                Text(
+                                                    "Episode $episodeNum",
+                                                    color = if (selectedEpisode == episodeNum) Color(0xFFFFB300) else Color.White,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            },
+                                            onClick = {
+                                                selectedEpisode = episodeNum
+                                                isEpisodeMenuExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Series Seasons and Episodes Selection
             if (currentMovie.isSeries && currentMovie.seasonsCount > 0) {
                 Text(
@@ -480,8 +870,6 @@ fun MovieDetailsScreen(
                     color = Color.White,
                     modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                 )
-                
-                var selectedSeason by remember(currentMovie.id) { mutableStateOf(1) }
                 
                 // Horizontal chips for seasons selection
                 LazyRow(
@@ -576,6 +964,7 @@ fun MovieDetailsScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
+                                    selectedEpisode = episodeNum
                                     navController.navigate(Screen.Player.createRoute(currentMovie.id))
                                 }
                         ) {
