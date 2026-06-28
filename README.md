@@ -1,6 +1,9 @@
 # 🎬 MatMovies
 
 <p align="center">
+![file_0000000006947207812287631d2d1b69.png](https://github.com/user-attachments/assets/cc5cc1b6-6d48-422e-b00c-9a5550c06a9f)
+
+
   
 </p>
 ![file_0000000006947207812287631d2d1b69.png](https://github.com/user-attachments/assets/cc5cc1b6-6d48-422e-b00c-9a5550c06a9f)
