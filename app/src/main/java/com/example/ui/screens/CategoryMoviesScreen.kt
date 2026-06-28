@@ -81,7 +81,7 @@ fun CategoryMoviesScreen(
                 }
             } else {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                    columns = GridCells.Fixed(3),
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 8.dp),
@@ -93,7 +93,9 @@ fun CategoryMoviesScreen(
                             movie = movie,
                             onClick = {
                                 navController.navigate(Screen.MovieDetails.createRoute(movie.id))
-                            }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            posterHeight = 150.dp
                         )
                     }
                 }

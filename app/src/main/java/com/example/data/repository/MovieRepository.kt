@@ -152,7 +152,9 @@ class MovieRepository(private val movieDao: MovieDao) {
                     isFeatured = true,
                     isTrending = true,
                     language = "Bengali",
-                    subtitlesUrl = "English (SRT)"
+                    subtitlesUrl = "English (SRT)",
+                    isSeries = true,
+                    seasonsCount = 4
                 ),
                 MovieEntity(
                     title = "Pushpa 2: The Rule",
@@ -184,7 +186,9 @@ class MovieRepository(private val movieDao: MovieDao) {
                     isTrending = true,
                     isLatest = true,
                     language = "Japanese",
-                    subtitlesUrl = "English, Bangla"
+                    subtitlesUrl = "English, Bangla",
+                    isSeries = true,
+                    seasonsCount = 1
                 ),
                 MovieEntity(
                     title = "Avatar: Fire and Ash",
@@ -216,7 +220,9 @@ class MovieRepository(private val movieDao: MovieDao) {
                     isTrending = true,
                     isLatest = true,
                     language = "Hindi",
-                    subtitlesUrl = "English"
+                    subtitlesUrl = "English",
+                    isSeries = true,
+                    seasonsCount = 3
                 ),
                 MovieEntity(
                     title = "Chader Pahar",

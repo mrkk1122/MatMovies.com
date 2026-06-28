@@ -42,6 +42,16 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.foundation.shape.CircleShape
+import com.example.ui.components.AnimatedAppName
+import kotlinx.coroutines.delay
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 
 @Composable
 fun HomeScreen(
@@ -321,29 +331,9 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = buildAnnotatedString {
-                                withStyle(style = SpanStyle(
-                                    color = Color(0xFFE50914), // Crimson Red
-                                    fontWeight = FontWeight.Black
-                                )) {
-                                    append("Mat")
-                                }
-                                withStyle(style = SpanStyle(
-                                    color = Color(0xFFFFB300), // Golden Amber
-                                    fontWeight = FontWeight.Black
-                                )) {
-                                    append("Movies")
-                                }
-                            },
-                            fontSize = 38.sp, // Made app name slightly larger
-                            style = TextStyle(
-                                shadow = Shadow(
-                                    color = Color.Black.copy(alpha = 0.5f),
-                                    offset = Offset(2f, 2f),
-                                    blurRadius = 4f
-                                )
-                            ),
+                        // Dynamically animated app brand header with 3 cycle animations
+                        AnimatedAppName(
+                            fontSize = 38.sp,
                             modifier = Modifier.padding(start = 2.dp)
                         )
                         
@@ -351,20 +341,26 @@ fun HomeScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // Sleek top right Search raw icon action (no background container)
-                            IconButton(
-                                onClick = { isSearchExpanded = true },
-                                modifier = Modifier
-                                    .testTag("home_search_toggle_btn")
-                                    .size(44.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Search,
-                                    contentDescription = "Open Search",
-                                    tint = Color(0xFFFFB300),
-                                    modifier = Modifier.size(26.dp)
-                                )
-                            }
+                            // Infinite bell swinging and pulse scale animations
+                            val infiniteTransition = rememberInfiniteTransition(label = "BellAnim")
+                            val rotationAngle by infiniteTransition.animateFloat(
+                                initialValue = -15f,
+                                targetValue = 15f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "BellRotation"
+                            )
+                            val scaleFactor by infiniteTransition.animateFloat(
+                                initialValue = 0.95f,
+                                targetValue = 1.15f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(durationMillis = 550, easing = LinearEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "BellScale"
+                            )
 
                             // Sleek top right Notifications raw icon action (no background container)
                             IconButton(
@@ -377,7 +373,14 @@ fun HomeScreen(
                                         imageVector = Icons.Default.Notifications,
                                         contentDescription = "Notifications",
                                         tint = Color.White,
-                                        modifier = Modifier.align(Alignment.Center).size(26.dp)
+                                        modifier = Modifier
+                                            .align(Alignment.Center)
+                                            .size(26.dp)
+                                            .graphicsLayer {
+                                                rotationZ = rotationAngle
+                                                scaleX = scaleFactor
+                                                scaleY = scaleFactor
+                                            }
                                     )
                                     // Add a small crimson badge to notify the user of updates!
                                     Box(
@@ -666,6 +669,7 @@ fun HomeScreen(
                     }
                 }
 
+
                 // Explore Categories Section
                 if (categories.isNotEmpty() && selectedGenreFilter == "All") {
                     SectionHeader(title = "Explore Genres")
@@ -764,6 +768,32 @@ fun HomeScreen(
                             }
                         }
                     }
+
+                    // Auto-rotating Bangla Natok Spotlight slider placed between Most Trending and Bangla Natok
+                    val natokSlides = remember {
+                        listOf(
+                            NatokSlide(
+                                title = "ভালবাসার কাব্য 🌸",
+                                subtitle = "Apurba • Mehazabien • Romantic Special",
+                                desc = "A deeply emotional local romantic natok set in a beautiful Bangladeshi village.",
+                                imageKey = "img_natok_banner"
+                            ),
+                            NatokSlide(
+                                title = "টং দোকানের কফি ☕",
+                                subtitle = "Mishu Sabbir • Polash • Family Comedy",
+                                desc = "The laughter-filled comedy stories of close bachelor friends on the tea stalls of Dhaka.",
+                                imageKey = "img_natok_comedy_banner"
+                            ),
+                            NatokSlide(
+                                title = "বিক্ষোভ: দ্য রেবেল 🔥",
+                                subtitle = "Shakib Khan • Blockbuster Action",
+                                desc = "An intense action drama highlighting societal struggles in Bangladesh.",
+                                imageKey = "img_action_banner"
+                            )
+                        )
+                    }
+                    NatokHeroSlider(slides = natokSlides, navController = navController)
+                    Spacer(modifier = Modifier.height(12.dp))
 
                     // Category 4: bangla natok
                     val banglaNatok = allMovies.filter { it.genre.contains("bangla natok", ignoreCase = true) }
@@ -1482,11 +1512,12 @@ fun MovieCard(
     movie: MovieEntity,
     onClick: () -> Unit,
     isInWatchlist: Boolean = false,
-    onToggleWatchlist: (() -> Unit)? = null
+    onToggleWatchlist: (() -> Unit)? = null,
+    modifier: Modifier = Modifier.width(135.dp),
+    posterHeight: androidx.compose.ui.unit.Dp = 190.dp
 ) {
     Card(
-        modifier = Modifier
-            .width(135.dp)
+        modifier = modifier
             .clickable { onClick() }
             .testTag("movie_card_${movie.id}"),
         colors = CardDefaults.cardColors(containerColor = Color.Transparent)
@@ -1495,7 +1526,7 @@ fun MovieCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(190.dp)
+                    .height(posterHeight)
                     .clip(RoundedCornerShape(18.dp))
                     .border(
                         width = 1.dp,
@@ -2019,3 +2050,159 @@ fun SecondaryHeroBanner(
         }
     }
 }
+
+// Support models and custom views for auto-rotating side-by-side Bangla Natok slider
+data class NatokSlide(
+    val title: String,
+    val subtitle: String,
+    val desc: String,
+    val imageKey: String
+)
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun NatokHeroSlider(
+    slides: List<NatokSlide>,
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
+    val pagerState = rememberPagerState(pageCount = { slides.size })
+    
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(4000)
+            if (slides.isNotEmpty()) {
+                val nextPage = (pagerState.currentPage + 1) % slides.size
+                pagerState.animateScrollToPage(
+                    page = nextPage,
+                    animationSpec = tween(durationMillis = 800)
+                )
+            }
+        }
+    }
+    
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 8.dp, vertical = 12.dp)
+    ) {
+        SectionHeader(
+            title = "Bangla Natok Spotlights 🎭",
+            onSeeAllClick = { navController.navigate(Screen.CategoryMovies.createRoute("bangla natok")) }
+        )
+        
+        Spacer(modifier = Modifier.height(6.dp))
+        
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .border(
+                    width = 1.dp,
+                    color = Color.White.copy(alpha = 0.08f),
+                    shape = RoundedCornerShape(16.dp)
+                )
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                val slide = slides[page]
+                val drawableId = DrawableHelper.getDrawableIdByName(slide.imageKey)
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable { navController.navigate(Screen.CategoryMovies.createRoute("bangla natok")) }
+                ) {
+                    Image(
+                        painter = painterResource(id = drawableId),
+                        contentDescription = slide.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    
+                    // Glassy-gradient overlay
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color.Black.copy(alpha = 0.5f),
+                                        Color.Black.copy(alpha = 0.9f)
+                                    )
+                                )
+                            )
+                    )
+                    
+                    // Information Text
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(14.dp)
+                    ) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE50914)),
+                            shape = RoundedCornerShape(4.dp),
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        ) {
+                            Text(
+                                text = "EXCLUSIVE PREMIERE",
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                        
+                        Text(
+                            text = slide.title,
+                            color = Color.White,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        
+                        Text(
+                            text = slide.subtitle,
+                            color = Color(0xFFFFB300),
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                        
+                        Text(
+                            text = slide.desc,
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                    
+                    // Indicator Dots inside the slide
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        slides.indices.forEach { index ->
+                            val isSelected = pagerState.currentPage == index
+                            Box(
+                                modifier = Modifier
+                                    .size(width = if (isSelected) 14.dp else 6.dp, height = 6.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isSelected) Color(0xFFFFB300) else Color.White.copy(alpha = 0.5f))
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+

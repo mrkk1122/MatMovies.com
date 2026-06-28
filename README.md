@@ -1,75 +1,21 @@
-<a>![file_00000000250c72069e9fe9672da964e8.png](https://github.com/user-attachments/assets/584ff1ac-ed35-4eb7-930c-33d846e39d94)
-</a>
-**MatMovies – Unlimited Entertainment in One App**
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
+</div>
 
-🎬 **Welcome to MatMovies**, your ultimate destination for non-stop entertainment. Watch the latest movies, trending dramas, popular web series, and classic favorites—all in one easy-to-use app. 
+# Run and deploy your AI Studio app
 
-✨ Features 
+This contains everything you need to run your app locally.
 
-🎥 Latest Released Movies 
+View your app in AI Studio: https://ai.studio/apps/b8b2c959-8e43-4e1c-9611-3a680ea71096
 
-📺 Popular Drama Series 
+## Run Locally
 
-🌐 Trending Web Series 
-
-🇧🇩 Bangla Movies & Natok
-
- 🌍 International Movies 
-
-❤️ Romance, Action, Thriller, Comedy, Horror & More 
-
-🔥 Regular Content Updates
-
- 🎬 HD Streaming Experience 
-
-📱 Mobile-Friendly Interface 
-
-⚡ Fast & Smooth Performance 
-
-🔍 Smart Search & Easy Navigation 
-
-⭐ Save Your Favorites 
-
-🎞️ High-Quality Video Playback Whether you love blockbuster movies, emotional dramas, thrilling web series, or timeless classics, MatMovies brings your favorite entertainment together in one place. Download MatMovies today and enjoy an amazing streaming experience anytime, anywhere. 
-
-<a>![file_0000000006947207812287631d2d1b69.png](https://github.com/user-attachments/assets/047ed9f0-a8a1-49fc-b7c5-73f866fef437)</a>
+**Prerequisites:**  [Android Studio](https://developer.android.com/studio)
 
 
-
-Keywords Latest Movies 
-
-• Bangla Movies 
-
-• Hollywood 
-
-• Bollywood 
-
-• South Indian Movies 
-
-• Bangla Natok
-
-• Drama Series 
-
-• Web Series
-
-• Entertainment 
-
-• HD Streaming 
-
-• Online Movies 
-
-• Trending Content 
-
-• Mobile Streaming 
-
-• Action
-
-• Romance 
-
-• Thriller 
-
-• Comedy 
-
-• Horror 
-
-• Family EntertUploadin
+1. Open Android Studio
+2. Select **Open** and choose the directory containing this project
+3. Allow Android Studio to fix any incompatibilities as it imports the project.
+4. Create a file named `.env` in the project directory and set `GEMINI_API_KEY` in that file to your Gemini API key (see `.env.example` for an example)
+5. Remove this line from the app's `build.gradle.kts` file: `signingConfig = signingConfigs.getByName("debugConfig")`
+6. Run the app on an emulator or physical device

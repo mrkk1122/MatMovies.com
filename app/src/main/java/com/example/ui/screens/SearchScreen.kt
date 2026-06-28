@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.data.model.MovieEntity
+import com.example.ui.components.AnimatedAppName
 import com.example.ui.components.MoviesScaffold
 import com.example.ui.navigation.Screen
 import com.example.ui.utils.DrawableHelper
@@ -55,13 +56,21 @@ fun SearchScreen(
                 .background(MaterialTheme.colorScheme.background)
                 .padding(innerPadding)
         ) {
-            Text(
-                text = "Search Movies",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 12.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AnimatedAppName(fontSize = 26.sp)
+                Text(
+                    text = "Search Movies",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = 0.7f)
+                )
+            }
 
             // Search Bar Input
             OutlinedTextField(

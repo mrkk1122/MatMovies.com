@@ -5,6 +5,7 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.BookmarkAdd
@@ -465,6 +466,207 @@ fun MovieDetailsScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
                             )
+                        }
+                    }
+                }
+            }
+
+            // Series Seasons and Episodes Selection
+            if (currentMovie.isSeries && currentMovie.seasonsCount > 0) {
+                Text(
+                    text = "Seasons & Episodes 🎬",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                )
+                
+                var selectedSeason by remember(currentMovie.id) { mutableStateOf(1) }
+                
+                // Horizontal chips for seasons selection
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                ) {
+                    items(currentMovie.seasonsCount) { index ->
+                        val seasonNum = index + 1
+                        val isSelected = selectedSeason == seasonNum
+                        
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .background(
+                                    if (isSelected) MaterialTheme.colorScheme.primary 
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isSelected) Color.Transparent else Color.White.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(20.dp)
+                                )
+                                .clickable { selectedSeason = seasonNum }
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Season $seasonNum",
+                                color = if (isSelected) Color.Black else Color.White,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+                
+                // List of episodes for the selected season
+                val episodesCount = when (currentMovie.title) {
+                    "Bachelor Point - Season 4" -> 12
+                    "Mirzapur - Season 3" -> 9
+                    else -> 8
+                }
+                
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    List(episodesCount) { episodeIdx ->
+                        val episodeNum = episodeIdx + 1
+                        val epTitle = when (currentMovie.title) {
+                            "Bachelor Point - Season 4" -> when (episodeIdx) {
+                                0 -> "The Bachelor Jam"
+                                1 -> "Dhaka Life Struggle"
+                                2 -> "Habu Bhai's Marriage Drama"
+                                3 -> "Kabila's Master Plan"
+                                4 -> "Shimul's Unseen Love"
+                                5 -> "Pasha Bhai's Outrage"
+                                6 -> "Borhan's Dilemma"
+                                7 -> "Antu's Return"
+                                8 -> "The Big Mess"
+                                9 -> "Bachelor Picnic"
+                                10 -> "New Tenant Threat"
+                                else -> "Bachelor Finale Clash"
+                            }
+                            "Mirzapur - Season 3" -> when (episodeIdx) {
+                                0 -> "The Throne Vacant"
+                                1 -> "Guddu's Iron Rule"
+                                2 -> "Kaleen Bhaiya's Recovery"
+                                3 -> "Sharad's Web of Lies"
+                                4 -> "The Golu Investigation"
+                                5 -> "Blood on the River"
+                                6 -> "Chota Tyagi's Decision"
+                                7 -> "The Purvanchal Meeting"
+                                else -> "The Mirzapur Massacre"
+                            }
+                            else -> "Episode $episodeNum: The Untold Chapter"
+                        }
+                        
+                        val epDuration = "45 mins"
+                        val epOverview = "A gripping and entertaining episode of ${currentMovie.title} full of twists, local humor, and high production quality."
+                        
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f)
+                            ),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    navController.navigate(Screen.Player.createRoute(currentMovie.id))
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .padding(8.dp)
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Thumbnail with movie poster/background and a beautiful overlay play button
+                                Box(
+                                    modifier = Modifier
+                                        .size(width = 110.dp, height = 70.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                ) {
+                                    val drawableId = DrawableHelper.getDrawableIdByName(currentMovie.posterDrawableName)
+                                    Image(
+                                        painter = painterResource(id = drawableId),
+                                        contentDescription = "Episode $episodeNum Thumbnail",
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    
+                                    // Ambient dark filter
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.Black.copy(alpha = 0.3f))
+                                    )
+                                    
+                                    // Play icon overlay
+                                    Box(
+                                        modifier = Modifier
+                                            .size(24.dp)
+                                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                            .align(Alignment.Center),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.PlayArrow,
+                                            contentDescription = "Play Episode",
+                                            tint = Color.Black,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                    
+                                    // Duration badge
+                                    Box(
+                                        modifier = Modifier
+                                            .align(Alignment.BottomEnd)
+                                            .padding(4.dp)
+                                            .background(Color.Black.copy(alpha = 0.75f), RoundedCornerShape(4.dp))
+                                    ) {
+                                        Text(
+                                            text = "EP $episodeNum",
+                                            fontSize = 8.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                                
+                                // Text metadata details
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Ep $episodeNum: $epTitle",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Text(
+                                        text = epDuration,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.padding(top = 2.dp)
+                                    )
+                                    Text(
+                                        text = epOverview,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis,
+                                        lineHeight = 14.sp,
+                                        modifier = Modifier.padding(top = 4.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }

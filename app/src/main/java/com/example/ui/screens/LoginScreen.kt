@@ -1,6 +1,7 @@
 package com.example.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.ui.navigation.Screen
 import com.example.ui.viewmodel.AuthViewModel
+import com.example.ui.components.AnimatedAppName
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,9 +62,10 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            shape = RoundedCornerShape(16.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF141419)),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.12f)),
+            elevation = CardDefaults.cardElevation(defaultElevation = 12.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -70,24 +73,36 @@ fun LoginScreen(
                     .padding(24.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(
-                    imageVector = Icons.Default.PlayCircleFilled,
-                    contentDescription = "Logo",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(64.dp)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "Welcome Back",
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                // Shiny App Logo and Name
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color(0xFFFFB300),
+                                    Color(0xFFE50914)
+                                )
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = "Logo Icon",
+                        tint = Color.Black,
+                        modifier = Modifier.size(36.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+                AnimatedAppName(fontSize = 32.sp)
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Sign in to continue streaming",
                     fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp, bottom = 24.dp)
+                    color = Color.White.copy(alpha = 0.7f),
+                    modifier = Modifier.padding(bottom = 24.dp)
                 )
 
                 if (errorMsg != null) {
@@ -108,30 +123,44 @@ fun LoginScreen(
                     }
                 }
 
+                // High Contrast Email Address Field
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Email Address") },
-                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email") },
+                    label = { Text("Email Address", color = Color.White.copy(alpha = 0.85f)) },
+                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = "Email", tint = Color(0xFFFFB300)) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 16.dp)
                         .testTag("login_email_input"),
                     shape = RoundedCornerShape(12.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    singleLine = true
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedLabelColor = Color(0xFFFFB300),
+                        unfocusedLabelColor = Color.White.copy(alpha = 0.8f),
+                        focusedBorderColor = Color(0xFFFFB300),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.4f),
+                        cursorColor = Color(0xFFFFB300),
+                        focusedContainerColor = Color(0xFF1E1E24),
+                        unfocusedContainerColor = Color(0xFF1A1A20)
+                    )
                 )
 
+                // High Contrast Password Field
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password") },
-                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password") },
+                    label = { Text("Password", color = Color.White.copy(alpha = 0.85f)) },
+                    leadingIcon = { Icon(Icons.Default.Lock, contentDescription = "Password", tint = Color(0xFFFFB300)) },
                     trailingIcon = {
                         IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                             Icon(
                                 imageVector = if (isPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                                contentDescription = "Toggle Password Visibility"
+                                contentDescription = "Toggle Password Visibility",
+                                tint = Color.White.copy(alpha = 0.7f)
                             )
                         }
                     },
@@ -141,9 +170,21 @@ fun LoginScreen(
                         .testTag("login_password_input"),
                     shape = RoundedCornerShape(12.dp),
                     visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
-                    singleLine = true
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedLabelColor = Color(0xFFFFB300),
+                        unfocusedLabelColor = Color.White.copy(alpha = 0.8f),
+                        focusedBorderColor = Color(0xFFFFB300),
+                        unfocusedBorderColor = Color.White.copy(alpha = 0.4f),
+                        cursorColor = Color(0xFFFFB300),
+                        focusedContainerColor = Color(0xFF1E1E24),
+                        unfocusedContainerColor = Color(0xFF1A1A20)
+                    )
                 )
 
+                // Sign In Button
                 Button(
                     onClick = {
                         if (email.isNotBlank() && password.isNotBlank()) {
@@ -159,7 +200,10 @@ fun LoginScreen(
                         .height(50.dp)
                         .testTag("login_button"),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFFB300),
+                        contentColor = Color.Black
+                    )
                 ) {
                     Text(
                         text = "Sign In",
@@ -171,55 +215,128 @@ fun LoginScreen(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                // Social Logins (Google & Facebook)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Divider(modifier = Modifier.weight(1f), color = Color.White.copy(alpha = 0.2f))
+                    Text(
+                        text = "Or Sign In With",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.White.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    Divider(modifier = Modifier.weight(1f), color = Color.White.copy(alpha = 0.2f))
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Google Button
+                    Button(
+                        onClick = {
+                            // Simulator auto log-in with Google test user
+                            email = "user@moviesbox.com"
+                            password = "password"
+                            authViewModel.login(email, password) {
+                                navController.navigate(Screen.Home.route) {
+                                    popUpTo(Screen.Login.route) { inclusive = true }
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "G ",
+                                color = Color(0xFFEA4335),
+                                fontWeight = FontWeight.Black,
+                                fontSize = 18.sp
+                            )
+                            Text(
+                                text = "Google",
+                                color = Color.Black,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+
+                    // Facebook Button
+                    Button(
+                        onClick = {
+                            // Simulator auto log-in with Facebook test user
+                            email = "user@moviesbox.com"
+                            password = "password"
+                            authViewModel.login(email, password) {
+                                navController.navigate(Screen.Home.route) {
+                                    popUpTo(Screen.Login.route) { inclusive = true }
+                                }
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1877F2)),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "f ",
+                                color = Color.White,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 18.sp
+                            )
+                            Text(
+                                text = "Facebook",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
                 // Standard register switcher
                 Row(
-                    modifier = Modifier.padding(vertical = 8.dp),
+                    modifier = Modifier.padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "New to MatMovies? ",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = Color.White.copy(alpha = 0.7f),
                         fontSize = 14.sp
                     )
                     Text(
                         text = "Register Now",
-                        color = MaterialTheme.colorScheme.primary,
+                        color = Color(0xFFFFB300),
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,
                         modifier = Modifier
                             .clickable { navController.navigate(Screen.Register.route) }
                             .testTag("register_navigation_link")
                     )
-                }
-
-                // Quick Bypass for immediate preview and testing
-                Text(
-                    text = "Quick Bypass (Testing Credentials)",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
-                )
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    TextButton(
-                        onClick = {
-                            email = "user@moviesbox.com"
-                            password = "password"
-                        }
-                    ) {
-                        Text("Fill User", fontSize = 11.sp, color = MaterialTheme.colorScheme.primary)
-                    }
-                    TextButton(
-                        onClick = {
-                            email = "admin@moviesbox.com"
-                            password = "admin"
-                        }
-                    ) {
-                        Text("Fill Admin", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-                    }
                 }
             }
         }

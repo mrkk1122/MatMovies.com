@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.ui.components.AnimatedAppName
 import com.example.ui.components.MoviesScaffold
 import com.example.ui.navigation.Screen
 import com.example.ui.utils.DrawableHelper
@@ -42,6 +43,8 @@ fun ProfileScreen(
 
     val watchHistory by movieViewModel.watchHistory.collectAsState()
     var showSubscriptionDialog by remember { mutableStateOf(false) }
+    var showAppSettingsDialog by remember { mutableStateOf(false) }
+    var showHelpSupportDialog by remember { mutableStateOf(false) }
 
     MoviesScaffold(
         navController = navController,
@@ -54,6 +57,24 @@ fun ProfileScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
         ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                AnimatedAppName(fontSize = 26.sp)
+                Text(
+                    text = "My Profile",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White.copy(alpha = 0.7f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
             // Profile Card Header
             Box(
                 modifier = Modifier
@@ -246,14 +267,14 @@ fun ProfileScreen(
                     icon = Icons.Default.Settings,
                     title = "App Settings",
                     subtitle = "Stream quality, autoplay preferences",
-                    onClick = {}
+                    onClick = { showAppSettingsDialog = true }
                 )
 
                 ProfileMenuItem(
                     icon = Icons.Default.Help,
                     title = "Help & Support",
                     subtitle = "Terms, FAQs, Contact MatMovies Team",
-                    onClick = {}
+                    onClick = { showHelpSupportDialog = true }
                 )
 
                 if (currentUser != null) {
@@ -339,6 +360,14 @@ fun ProfileScreen(
             }
         )
     }
+
+    if (showAppSettingsDialog) {
+        AppSettingsDialog(onDismiss = { showAppSettingsDialog = false })
+    }
+
+    if (showHelpSupportDialog) {
+        HelpSupportDialog(onDismiss = { showHelpSupportDialog = false })
+    }
 }
 
 @Composable
@@ -404,3 +433,249 @@ fun PlanCard(
         }
     }
 }
+
+@Composable
+fun AppSettingsDialog(
+    onDismiss: () -> Unit
+) {
+    var streamQuality by remember { mutableStateOf("Auto") }
+    var autoplayEnabled by remember { mutableStateOf(true) }
+    var cacheClearedMessage by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "App Settings ⚙️",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                // Stream Quality selection
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Video Stream Quality",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = Color.White
+                    )
+                    listOf("Auto (Recommended)", "Full HD 1080p", "Data Saver 480p").forEach { quality ->
+                        val isSelected = streamQuality == quality || (streamQuality == "Auto" && quality.startsWith("Auto"))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { streamQuality = quality }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(quality, fontSize = 13.sp, color = if (isSelected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.7f))
+                            RadioButton(
+                                selected = isSelected,
+                                onClick = { streamQuality = quality },
+                                colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
+                            )
+                        }
+                    }
+                }
+
+                Divider(color = Color.White.copy(alpha = 0.15f))
+
+                // Autoplay Toggle Option
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Autoplay Next Episode",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Automatically start next episode when current ends",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Switch(
+                        checked = autoplayEnabled,
+                        onCheckedChange = { autoplayEnabled = it },
+                        colors = SwitchDefaults.colors(checkedThumbColor = MaterialTheme.colorScheme.primary)
+                    )
+                }
+
+                Divider(color = Color.White.copy(alpha = 0.15f))
+
+                // Storage Option (Clear cache)
+                Button(
+                    onClick = {
+                        cacheClearedMessage = "Cache cleared successfully! 48.5 MB freed."
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Delete, contentDescription = "Clear Cache", modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Clear Local Playback Cache", color = MaterialTheme.colorScheme.onSecondaryContainer, fontSize = 12.sp)
+                }
+
+                if (cacheClearedMessage.isNotEmpty()) {
+                    Text(
+                        text = cacheClearedMessage,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text("Save Settings", color = Color.Black, fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = Color.White.copy(alpha = 0.6f))
+            }
+        }
+    )
+}
+
+@Composable
+fun HelpSupportDialog(
+    onDismiss: () -> Unit
+) {
+    var expandedFAQIndex by remember { mutableStateOf(-1) }
+    var actionFeedback by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Help & Support 💬",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Frequently Asked Questions",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = Color.White
+                )
+
+                val faqs = listOf(
+                    "How do offline downloads work?" to "To download videos offline, go to any video details screen and click the 'Download' icon. The movie or series episode will download in full HD and save directly to your in-app simulated storage. You can play downloaded videos anytime from the Downloads tab even without an active internet connection.",
+                    "Can I upgrade my plan anytime?" to "Yes! You can choose either Premium or VIP plans anytime on the Profile page. Upgrade payments are processed securely, granting you instant access to HD content.",
+                    "Is cast to Smart TV supported?" to "Cast option is available in the media player interface. Make sure your Smart TV and phone are connected to the same network to enjoy MatMovies on the big screen."
+                )
+
+                faqs.forEachIndexed { index, (question, answer) ->
+                    val isExpanded = expandedFAQIndex == index
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { expandedFAQIndex = if (isExpanded) -1 else index },
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = question,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Icon(
+                                    imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                                    contentDescription = "Toggle Answer",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                            if (isExpanded) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = answer,
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Divider(color = Color.White.copy(alpha = 0.15f))
+
+                Text(
+                    text = "Still need help? Contact Us!",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = Color.White
+                )
+
+                Button(
+                    onClick = {
+                        actionFeedback = "Email copied to clipboard: support@matmovies.com"
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(Icons.Default.Email, contentDescription = "Email Support", tint = Color.Black)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Copy Support Email Address", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+
+                if (actionFeedback.isNotEmpty()) {
+                    Text(
+                        text = actionFeedback,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                Text("Close", color = MaterialTheme.colorScheme.onSecondaryContainer, fontWeight = FontWeight.Bold)
+            }
+        }
+    )
+}
+

@@ -21,5 +21,7 @@ data class MovieEntity(
     val language: String = "English",
     val subtitlesUrl: String = "",
     val isUploadedByUser: Boolean = false,
-    val isUpcoming: Boolean = false
+    val isUpcoming: Boolean = false,
+    val isSeries: Boolean = false,
+    val seasonsCount: Int = 0
 )
