@@ -1,7 +1,7 @@
 # 🎬 MatMovies
 
 <p align="center">
-  <img src="assets/banner.png" alt="MatMovies Banner" width="100%">
+  https://imgur.com/a/Qkq7yoS
 </p>
 
 <h1 align="center">🍿 MatMovies</h1>
