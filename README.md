@@ -10,11 +10,16 @@ MatMovies – Unlimited Entertainment in One App 🎬
 Welcome to MatMovies, your ultimate destination for non-stop entertainment. Watch the latest movies, trending dramas, popular web series, and classic favorites—all in one easy-to-use app.
 ✨ Features
 🎥 Latest Released Movies
+
 📺 Popular Drama Series
+
 🌐 Trending Web Series
+
 🇧🇩 Bangla Movies & Natok
 🌍 International Movies
+
 ❤️ Romance, Action, Thriller, Comedy, Horror & More
+
 🔥 Regular Content Updates
 🎬 HD Streaming Experience
 📱 Mobile-Friendly Interface
