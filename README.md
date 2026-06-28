@@ -4,7 +4,7 @@
   
 </p>
 
-<h1 align="center">🍿 MatMovies</h1>
+![1782624762312.png](https://github.com/user-attachments/assets/326b6f9c-9051-4ba0-aaea-91d2bd25a6c6)
 
 <p align="center">
   <b>Upcoming Free Movie Streaming Platform</b><br>
