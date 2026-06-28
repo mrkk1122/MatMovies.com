@@ -37,21 +37,39 @@
 
 
 Keywords Latest Movies 
+
 • Bangla Movies 
+
 • Hollywood 
+
 • Bollywood 
+
 • South Indian Movies 
+
 • Bangla Natok
+
 • Drama Series 
+
 • Web Series
+
 • Entertainment 
+
 • HD Streaming 
+
 • Online Movies 
+
 • Trending Content 
+
 • Mobile Streaming 
+
 • Action
+
 • Romance 
+
 • Thriller 
+
 • Comedy 
+
 • Horror 
+
 • Family EntertUploadin
