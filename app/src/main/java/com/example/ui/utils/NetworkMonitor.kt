@@ -14,6 +14,15 @@ class NetworkMonitor(context: Context) {
     private val connectivityManager =
         context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
+    fun isCurrentlyOnline(): Boolean {
+        val activeNetwork = connectivityManager.activeNetwork
+        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+        return capabilities != null &&
+                (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
+                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
+    }
+
     val isOnline: Flow<Boolean> = callbackFlow {
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
@@ -26,13 +35,7 @@ class NetworkMonitor(context: Context) {
         }
 
         // Send initial state
-        val activeNetwork = connectivityManager.activeNetwork
-        val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
-        val isInitiallyOnline = capabilities != null &&
-                (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR) ||
-                        capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET))
-        trySend(isInitiallyOnline)
+        trySend(isCurrentlyOnline())
 
         val request = NetworkRequest.Builder()
             .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)

@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
                     color = androidx.compose.material3.MaterialTheme.colorScheme.background
                 ) {
                     val networkMonitor = remember { NetworkMonitor(applicationContext) }
-                    val isOnline by networkMonitor.isOnline.collectAsState(initial = true)
+                    val isOnline by networkMonitor.isOnline.collectAsState(initial = networkMonitor.isCurrentlyOnline())
 
                     if (isOnline) {
                         MoviesAppNavigation(

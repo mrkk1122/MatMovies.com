@@ -118,7 +118,7 @@ fun OfflineScreen(
 
         // Explanation text describing the illustration and context
         Text(
-            text = "!\nআপনার ইন্টারনেট সংযোগটি বিচ্ছিন্ন হয়ে গেছে। দয়া করে সংযোগটি পরীক্ষা করে পুনরায় চেষ্টা করুন।",
+            text = "একটি টম ২টি ছেঁড়া তার হাতে নিয়ে বসে আছে!\nআপনার ইন্টারনেট সংযোগটি বিচ্ছিন্ন হয়ে গেছে। দয়া করে সংযোগটি পরীক্ষা করে পুনরায় চেষ্টা করুন।",
             color = Color.White.copy(alpha = 0.7f),
             fontSize = 14.sp,
             fontWeight = FontWeight.Normal,
